@@ -1,0 +1,18 @@
+{
+    "add_sel": {
+        "vlq": {
+            "files": [
+                "VectorLQToTauTau_betaRd33_0_highM_mU1000_gU1_matched_interference",
+                "VectorLQToTauTau_betaRd33_0_lowM_mU1000_gU1_matched_interference"
+            ], 
+            "sel": "(1)", 
+            "weight": 1
+        } 
+    }, 
+    "baseline_sel": "(deepTauVsJets_vvvloose_1>0.5 && deepTauVsJets_medium_2>0.5 && leptonveto==0 && (trg_doubletau==1 || (pt_1>180 && trg_singletau_1==1) || (pt_2>180 && trg_singletau_2==1)) && deepTauVsEle_vvloose_1==1 && deepTauVsEle_vvloose_2==1 && deepTauVsMu_vloose_1==1 && deepTauVsMu_vloose_2==1 && os==1)", 
+    "file_ext": "_tt_2018.root", 
+    "lumi": 59740,
+    "file_location": "/vols/cms/gu18/Offline/output/MSSM/vlq_2018_matched/",
+    "params_file": "/vols/cms/gu18/CrabCMSSW/CMSSW_10_2_19/src/UserCode/ICHiggsTauTau/Analysis/HiggsTauTauRun2/scripts/params_vlq_2018_norm.json",
+    "weights": "wt*wt_tau_trg_mssm*wt_tau_id_mssm*wt_prefire"
+}
