@@ -16,7 +16,18 @@ parser.add_argument('--load', help= 'Load dataframe from file',  action='store_t
 args = parser.parse_args()
 
 # Set up variables to use for training
-variables = ["mt_tot","pt_1","pt_2","met","m_vis","n_deepbjets","pt_tt","mt_lep","met_dphi_1","met_dphi_2","jet_pt_1/pt_1","jet_pt_2/pt_2"]
+#variables = ["mt_tot","pt_1","pt_2","met","m_vis","n_deepbjets","pt_tt","mt_lep","met_dphi_1","met_dphi_2","jet_pt_1/pt_1","jet_pt_2/pt_2"]
+
+variables = ["pt_1", "pt_2","pt_3","pt_4","E_1","E_2","E_3","E_4","eta_1","eta_2","eta_3","eta_4",
+"phi_1","phi_2","phi_3","phi_4","dphi_12","dphi_13","dphi_14","dphi_23","dphi_24","dphi_34","dR_12","dR_13","dR_14","dR_23",
+"dR_24","dR_34","mt_1","mt_2","mt_3","mt_4","mt_lep_12","mt_lep_13","mt_lep_14","mt_lep_23","mt_lep_24","mt_lep_34",
+"mvis_12","mvis_13","mvis_14","mvis_23","mvis_24","mvis_34","mvis_min_dphi_1", "mvis_min_dphi_2","mvis_min_dR_1", "mvis_min_dR_2", 
+"mvis_min_sum_dphi_1","mvis_min_sum_dphi_2","mvis_min_sum_dR_1","mvis_min_sum_dR_2","pt_min_dphi_1","pt_min_dphi_2","pt_min_dR_1", 
+"pt_min_dR_2","pt_min_sum_dphi_1","pt_min_sum_dphi_2","pt_min_sum_dR_1","pt_min_sum_dR_2","p_min_dphi_1","p_min_dphi_2","p_min_sum_dphi_1",
+"p_min_sum_dphi_2","p_min_dR_1","p_min_dR_2","p_min_sum_dR_1","p_min_sum_dR_2","q_1","q_2","q_3","q_4"]
+
+
+#variables = ["mvis_min_dphi_1"]
 
 if not (args.load and os.path.isfile("dataframes/{}_{}.pkl".format(args.channel,args.year))):
   print "<< Making dataframe >>"  
