@@ -38,6 +38,7 @@ def DrawBDTScoreDistributions(pred_dict,output="bdt_score"):
 
 def DrawFeatureImportance(model,output="feature_importance"):
   ax = plot_importance(model)
+  ax.tick_params(axis='y', labelsize=5)
   ax.figure.savefig("plots/"+output+".pdf")
   
 
