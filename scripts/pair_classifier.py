@@ -7,9 +7,14 @@ import xgboost as xgb
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import confusion_matrix
 import warnings
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import accuracy_score
+
+
+
 warnings.filterwarnings(action='ignore', category=DeprecationWarning)
 parser = argparse.ArgumentParser()
 parser.add_argument('--channel',help= 'Channel to train BDT for', default='tt')
@@ -47,7 +52,7 @@ if not (args.load and os.path.isfile("dataframes/{}_{}.pkl".format(args.channel,
 
   # Add signal dataframe
   sig_df = Dataframe()
-  sig_df.LoadRootFilesFromJson("json_selection/{}_{}_sig.json".format(args.channel,args.year),variables)
+  sig_df.LoadRootFilesFromJson("json_selection/{}_{}_sig_pair.json".format(args.channel,args.year),variables)
   sig_df.NormaliseWeights()
     
   sig_df.dataframe['y'] = sig_df.dataframe.apply(label_target,axis=1)
@@ -83,6 +88,7 @@ if not (args.load and os.path.isfile("dataframes/{}_{}.pkl".format(args.channel,
  
   for i in abs_variables: 
     sig_df.dataframe[i] = sig_df.dataframe[i].abs()
+  
   
   print "Signal Dataframe"
   print sig_df.dataframe.head()
@@ -121,21 +127,41 @@ X_test = test.drop(["y","weights"],axis=1)
 print "<< Running training >>"
 
 
-#xgb_model = xgb.XGBClassifier(
-#                              learning_rate =0.1,
-#                              n_estimators=1000,
-#                              max_depth=5,
-#                              min_child_weight=1,
-#                              gamma=0,
-#                              subsample=0.8,
-#                              colsample_bytree=0.8,
-#                              objective= 'binary:logistic',
-#                              nthread=4,
-#                              scale_pos_weight=1,
-#                              seed=27
-#                              )
+# A parameter grid for XGBoost
+       
+# pipe_xgb = Pipeline([('XGB', xgb.XGBClassifier(random_state=42))])
 
-xgb_model = xgb.XGBClassifier()
+# param_range = [1, 2, 3, 4, 5, 6]
+# param_range_fl = [1.0, 0.5, 0.1]
+# n_estimators = [50,100,150]
+# learning_rates = [.1,.2,.3]
+
+# xgb_param_grid = [{'XGB__learning_rate': learning_rates,
+                    # 'XGB__max_depth': param_range,
+                    # 'XGB__min_child_weight': param_range[:2],
+                    # 'XGB__subsample': param_range_fl,
+                    # 'XGB__n_estimators': n_estimators}]
+
+# xgb_grid_search = GridSearchCV(estimator=pipe_xgb,
+        # param_grid=xgb_param_grid,
+        # scoring='accuracy',
+        # cv=3)
+
+# xgb_grid_search.fit(X_train, y_train, wt_train)
+
+# print('Test Accuracy: {}'.format(xgb_grid_search.score(X_test,y_test)))
+# print('Best Params: {}'.format(xgb_grid_search.best_params_))
+# Best Params: {'XGB__min_child_weight': 1, 'XGB__subsample': 0.5, 'XGB__learning_rate': 0.2, 'XGB__n_estimators': 100, 'XGB__max_depth': 1}
+
+
+
+xgb_model = xgb.XGBClassifier(
+                             learning_rate =0.2,
+                             n_estimators=100,
+                             max_depth=1,
+                             min_child_weight=1,
+                             subsample=0.5
+                             )
 
 xgb_model.fit(X_train, y_train, sample_weight=wt_train)
 
