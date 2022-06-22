@@ -35,9 +35,46 @@ def DrawBDTScoreDistributions(pred_dict,output="bdt_score"):
   plt.draw()
   plt.savefig("plots/"+output+".pdf")
   plt.close()
+  
+def DrawVarDistribution(df,n_classes,variable,xlim_low,xlim_high,output="var_dist"):
+  if n_classes == 2:
+    c0 = df.loc[(df.loc[:,"y"]==0)]
+    c1 = df.loc[(df.loc[:,"y"]==1)]
+    
+    wt0 = c0.loc[:,"weights"]
+    wt1 = c1.loc[:,"weights"]
+    
+    val0 = c0.loc[:,variable]
+    val1 = c1.loc[:,variable]
+    
+    dict_ = {"cat1":{"preds":val0,"weights":wt0},"cat2":{"preds":val1,"weights":wt1}}
 
-def DrawFeatureImportance(model,output="feature_importance"):
-  ax = plot_importance(model)
+  else:
+    c0 = df.loc[(df.loc[:,"y"]==0)]
+    c1 = df.loc[(df.loc[:,"y"]==1)]
+    c2 = df.loc[(df.loc[:,"y"]==2)]
+    
+    wt0 = c0.loc[:,"weights"]
+    wt1 = c1.loc[:,"weights"]
+    wt2 = c2.loc[:,"weights"]
+    
+    val0 = c0.loc[:,variable]
+    val1 = c1.loc[:,variable]
+    val2 = c2.loc[:,variable]
+    
+    dict_ = {"cat1":{"preds":val0,"weights":wt0},"cat2":{"preds":val1,"weights":wt1},"cat3":{"preds":val2,"weights":wt2}}
+    
+  for key, val in dict_.items():
+    _, bins, _ = plt.hist(val["preds"], weights=val["weights"] ,bins=100, histtype='step', label=key)    
+  plt.xlabel(variable)
+  plt.xlim(xlim_low,xlim_high)
+  plt.legend(loc='best')
+  plt.draw()
+  plt.savefig("plots/"+output+".pdf")
+  plt.close()
+
+def DrawFeatureImportance(model,imp_type,output="feature_importance"):
+  ax = plot_importance(model, importance_type = imp_type, xlabel = imp_type)
   ax.tick_params(axis='y', labelsize=5)
   ax.figure.savefig("plots/"+output+".pdf")
   
