@@ -3,7 +3,11 @@
         "signal": {
             "files": [
 
+		"phi100A60To4Tau",
+		"phi100A150To4Tau",
+		"phi300A60To4Tau",
 		"phi300A150To4Tau"
+		
 
 	
             ], 
