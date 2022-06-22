@@ -1,5 +1,5 @@
 from UserCode.sig_vs_bkg_discriminator.Dataframe import Dataframe
-from UserCode.sig_vs_bkg_discriminator.plotting import DrawROCCurve, DrawBDTScoreDistributions, DrawFeatureImportance, DrawConfusionMatrix
+from UserCode.sig_vs_bkg_discriminator.plotting import DrawROCCurve, DrawBDTScoreDistributions, DrawFeatureImportance, DrawConfusionMatrix, DrawVarDistribution
 import argparse
 import pickle as pkl
 import pandas as pd
@@ -53,8 +53,7 @@ if not (args.load and os.path.isfile("dataframes/{}_{}.pkl".format(args.channel,
   # Add signal dataframe
   sig_df = Dataframe()
   sig_df.LoadRootFilesFromJson("json_selection/{}_{}_sig_pair.json".format(args.channel,args.year),variables)
-  sig_df.NormaliseWeights()
-    
+  
   sig_df.dataframe['y'] = sig_df.dataframe.apply(label_target,axis=1)
   sig_df.dataframe = sig_df.dataframe[sig_df.dataframe.y != 3]
   
@@ -90,14 +89,40 @@ if not (args.load and os.path.isfile("dataframes/{}_{}.pkl".format(args.channel,
     sig_df.dataframe[i] = sig_df.dataframe[i].abs()
   
   
-  print "Signal Dataframe"
+  print "Raw Dataframe"
   print sig_df.dataframe.head()
   print "Length =",len(sig_df.dataframe)
-  print "Weight Normalisation =",sig_df.dataframe.loc[:,"weights"].sum()
-  print 
   
-  #Combine dataframes
-  df_total = sig_df.dataframe
+  df0 = Dataframe()
+  df1 = Dataframe()
+  df2 = Dataframe()
+  
+  df0.dataframe = sig_df.dataframe[sig_df.dataframe['y'] == 0].copy()
+  df1.dataframe = sig_df.dataframe[sig_df.dataframe['y'] == 1].copy()
+  df2.dataframe = sig_df.dataframe[sig_df.dataframe['y'] == 2].copy()
+  
+  df0.NormaliseWeights()
+  print "Dataframe Target = 0"
+  print df0.dataframe.head()
+  print "Length =",len(df0.dataframe)
+  print "Weight Normalisation =",df0.dataframe.loc[:,"weights"].sum()
+  
+  df1.NormaliseWeights()
+  print "Dataframe Target = 1"
+  print df1.dataframe.head()
+  print "Length =",len(df1.dataframe)
+  print "Weight Normalisation =",df1.dataframe.loc[:,"weights"].sum()
+  
+  
+  df2.NormaliseWeights()
+  print "Dataframe Target = 2"
+  print df2.dataframe.head()
+  print "Length =",len(df2.dataframe)
+  print "Weight Normalisation =",df2.dataframe.loc[:,"weights"].sum()
+
+  
+  # Combine dataframes
+  df_total = pd.concat([df0.dataframe,df1.dataframe,df2.dataframe],ignore_index=True, sort=False)
   #df_total.drop(['pdgid_mother_1','pdgid_mother_2','pdgid_mother_3','pdgid_mother_4'],inplace = True,axis=1)
   df_total.drop(['pdgid_mother_1','pdgid_mother_2','pdgid_mother_3','pdgid_mother_4','q_1','q_2','q_3','q_4',
   "pt_1", "pt_2","pt_3","pt_4","mt_lep_12","mt_lep_13","mt_lep_14","mt_lep_23","mt_lep_24","mt_lep_34"],
@@ -106,11 +131,12 @@ if not (args.load and os.path.isfile("dataframes/{}_{}.pkl".format(args.channel,
   print df_total.head()
   print "Length =",len(df_total)
  
-  
   df_total.to_pickle("dataframes/multiclass_{}_{}.pkl".format(args.channel,args.year))
 else:
   print "<< Loading in dataframe >>"
   df_total = pd.read_pickle("dataframes/multiclass_{}_{}.pkl".format(args.channel,args.year))
+  
+DrawVarDistribution(df_total,3,'pt_3_mt_lep_34',0,100,"pc_pt_3_mt_lep_34_distribution")
 
 # Set up train and test separated dataframes
 train, test = train_test_split(df_total,test_size=0.5, random_state=42)
@@ -188,11 +214,11 @@ preds0 = probs0[:,0]
 preds1 = probs1[:,1]
 preds2 = probs2[:,2]
 
-
 DrawBDTScoreDistributions({"cat1":{"preds":preds0,"weights":wt0},"cat2":{"preds":preds1,"weights":wt1},"cat3":{"preds":preds2,"weights":wt2}})
 
 # Feature importance
-DrawFeatureImportance(xgb_model)
+DrawFeatureImportance(xgb_model,"gain","pc_feature_importance_gain")
+DrawFeatureImportance(xgb_model,"weight","pc_feature_importance_weight")
 
 # Confusion matrix
 
@@ -207,4 +233,6 @@ for i in range(len(preds)):
 print "<< Score:",score,"/",len(preds)," >>"
 probs = xgb_model.predict_proba(X_test)
 DrawConfusionMatrix(y_test,preds,wt_test,["cat 1","cat 2","cat 3"])
+
+
 
