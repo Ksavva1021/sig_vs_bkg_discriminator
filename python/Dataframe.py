@@ -256,7 +256,7 @@ class Dataframe:
 
     self.dataframe = total_df
 
-  def LoadRootFilesFromJson(self,json_file,variables):
+  def LoadRootFilesFromJson(self,json_file,variables,specific_file=None):
     with open(json_file) as jf:
       data = json.load(jf)
 
@@ -272,11 +272,12 @@ class Dataframe:
 
     for en, opt in data["add_sel"].items():
       for f in opt["files"]:
-        self.AddRootFiles([f],tree_name="ntuple") 
-        self.AddRootSelection([f],opt["sel"],extra_name=en)
-        self.ScaleColumn([f],data["weights"],opt["weight"],extra_name=en)
-        if f[-1] not in ["A","B","C","D","E","F","G","H"]:
-          self.ScaleColumn([f],data["weights"],data["lumi"]*params[f]['xs']/params[f]['evt'],extra_name=en)
+        if specific_file == None or specific_file == f:
+          self.AddRootFiles([f],tree_name="ntuple") 
+          self.AddRootSelection([f],opt["sel"],extra_name=en)
+          self.ScaleColumn([f],data["weights"],opt["weight"],extra_name=en)
+          if f[-1] not in ["A","B","C","D","E","F","G","H"]:
+            self.ScaleColumn([f],data["weights"],data["lumi"]*params[f]['xs']/params[f]['evt'],extra_name=en)
 
     self.AddBaselineRootSelection(data["baseline_sel"])  
     self.PrintRootFiles()

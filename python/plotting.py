@@ -36,7 +36,7 @@ def DrawBDTScoreDistributions(pred_dict,output="bdt_score"):
   plt.savefig("plots/"+output+".pdf")
   plt.close()
   
-def DrawVarDistribution(df,n_classes,variable,xlim_low,xlim_high,output="var_dist"):
+def DrawVarDistribution(df,n_classes,variable,xlim_low,xlim_high,output="var_dist",bin_edges=100):
   if n_classes == 2:
     c0 = df.loc[(df.loc[:,"y"]==0)]
     c1 = df.loc[(df.loc[:,"y"]==1)]
@@ -46,7 +46,7 @@ def DrawVarDistribution(df,n_classes,variable,xlim_low,xlim_high,output="var_dis
     
     val0 = c0.loc[:,variable]
     val1 = c1.loc[:,variable]
-    
+ 
     dict_ = {"cat1":{"preds":val0,"weights":wt0},"cat2":{"preds":val1,"weights":wt1}}
 
   else:
@@ -65,7 +65,8 @@ def DrawVarDistribution(df,n_classes,variable,xlim_low,xlim_high,output="var_dis
     dict_ = {"cat1":{"preds":val0,"weights":wt0},"cat2":{"preds":val1,"weights":wt1},"cat3":{"preds":val2,"weights":wt2}}
     
   for key, val in dict_.items():
-    _, bins, _ = plt.hist(val["preds"], weights=val["weights"] ,bins=100, histtype='step', label=key)    
+    _, bins, _ = plt.hist(val["preds"], weights=val["weights"] ,bins=bin_edges, histtype='step', label=key)
+    
   plt.xlabel(variable)
   plt.xlim(xlim_low,xlim_high)
   plt.legend(loc='best')
