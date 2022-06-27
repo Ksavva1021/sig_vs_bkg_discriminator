@@ -7,6 +7,7 @@ import math
 import json
 from prettytable import PrettyTable
 from textwrap import wrap
+from sklearn.model_selection import train_test_split
 
 class Dataframe:
 
@@ -256,7 +257,7 @@ class Dataframe:
 
     self.dataframe = total_df
 
-  def LoadRootFilesFromJson(self,json_file,variables,specific_file=None):
+  def LoadRootFilesFromJson(self,json_file,variables,specific_file=None,quiet=False):
     with open(json_file) as jf:
       data = json.load(jf)
 
@@ -280,14 +281,27 @@ class Dataframe:
             self.ScaleColumn([f],data["weights"],data["lumi"]*params[f]['xs']/params[f]['evt'],extra_name=en)
 
     self.AddBaselineRootSelection(data["baseline_sel"])  
-    self.PrintRootFiles()
+    if not quiet: self.PrintRootFiles()
 
     self.GetDataframe()
 
     self.dataframe = self.dataframe.rename(columns={data["weights"]:'weights'})
 
-  def NormaliseWeights(self,column="weights"):
-    self.dataframe.loc[:,column] = 1000000*self.dataframe.loc[:,column]/self.dataframe.loc[:,column].sum()
+  def NormaliseWeights(self,column="weights",total_scale=1000000,train_frac=None,test_frac=None):
+    if train_frac == None and test_frac == None:
+      self.dataframe.loc[:,column] = total_scale*self.dataframe.loc[:,column]/self.dataframe.loc[:,column].sum()
+    else:
+      train = self.dataframe.loc[(self.dataframe.loc[:,'train']==1)].copy(deep=True)
+      test = self.dataframe.loc[(self.dataframe.loc[:,'train']==0)].copy(deep=True)
+      train.loc[:,column] = train_frac*total_scale*train.loc[:,column]/train.loc[:,column].sum()
+      test.loc[:,column] = test_frac*total_scale*test.loc[:,column]/test.loc[:,column].sum()
+      self.dataframe =  pd.concat([train,test],ignore_index=True, sort=False)
+
+  def TrainTestSplit(self,column="train",testsize=0.5,seed=42):
+    train, test = train_test_split(self.dataframe,test_size=testsize, random_state=seed)
+    train.loc[:,column] = 1
+    test.loc[:,column] = 0
+    self.dataframe =  pd.concat([train,test],ignore_index=True, sort=False)
 
   def SelectColumns(self,columns):
     self.AddColumns(columns)
@@ -300,6 +314,10 @@ class Dataframe:
 
   def DropModifiedVariables(self):
     self.dataframe = self.dataframe.drop(self.modified_columns,axis=1)
+
+  def Copy(self):
+    import copy
+    return copy.deepcopy(self)
 
   def WriteToRoot(self,path,key='ntuple'):
 

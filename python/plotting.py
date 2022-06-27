@@ -12,7 +12,7 @@ def DrawROCCurve(act,pred,wt,output="roc_curve"):
   
   plt.title('ROC')
   plt.plot(fpr, tpr, 'b', label = 'AUC = %0.2f' % roc_auc)
-  print "ROC Score:", roc_auc
+  print "AUC Score:", roc_auc
   plt.legend(loc = 'lower right')
   plt.plot([0, 1], [0, 1],'r--')
   plt.xlim([0, 1])
@@ -22,6 +22,25 @@ def DrawROCCurve(act,pred,wt,output="roc_curve"):
   plt.draw()
   plt.savefig("plots/"+output+".pdf")
   plt.close()
+
+def DrawMultipleROCCurves(act,pred,wt,output="roc_curve",name="ROC"):
+
+  for key,val in act.iteritems():
+    fpr, tpr, threshold = metrics.roc_curve(act[key], pred[key], sample_weight=wt[key])
+    roc_auc = roc_auc_score(act[key], pred[key], sample_weight=wt[key])
+    #print key,"AUC Score:", roc_auc
+    plt.plot(fpr, tpr, label = r"${}$".format(key) +', AUC = %0.4f' % roc_auc)
+  plt.title(name)
+  plt.legend(loc = 'lower right',fontsize='x-small')
+  plt.plot([0, 1], [0, 1],'r--')
+  plt.xlim([0, 1])
+  plt.ylim([0, 1])
+  plt.ylabel('True Positive Rate')
+  plt.xlabel('False Positive Rate')
+  plt.draw()
+  plt.savefig("plots/"+output+".pdf")
+  plt.close()
+
 
 
 def DrawBDTScoreDistributions(pred_dict,output="bdt_score"):
