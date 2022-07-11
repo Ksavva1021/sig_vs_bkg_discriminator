@@ -1,5 +1,6 @@
 import matplotlib
 import matplotlib.pyplot as plt
+import pylab as plt
 import sklearn.metrics as metrics
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import confusion_matrix
@@ -7,6 +8,7 @@ from xgboost import plot_importance
 import numpy as np
 
 def DrawROCCurve(act,pred,wt,output="roc_curve"):
+
   fpr, tpr, threshold = metrics.roc_curve(act, pred,sample_weight=wt)
   roc_auc = roc_auc_score(act, pred, sample_weight=wt)
   
@@ -21,6 +23,7 @@ def DrawROCCurve(act,pred,wt,output="roc_curve"):
   plt.xlabel('False Positive Rate')
   plt.draw()
   plt.savefig("plots/"+output+".pdf")
+  print "plots/"+output+".pdf created"
   plt.close()
 
 def DrawMultipleROCCurves(act,pred,wt,output="roc_curve",name="ROC"):
@@ -29,7 +32,7 @@ def DrawMultipleROCCurves(act,pred,wt,output="roc_curve",name="ROC"):
     fpr, tpr, threshold = metrics.roc_curve(act[key], pred[key], sample_weight=wt[key])
     roc_auc = roc_auc_score(act[key], pred[key], sample_weight=wt[key])
     #print key,"AUC Score:", roc_auc
-    plt.plot(fpr, tpr, label = r"${}$".format(key) +', AUC = %0.4f' % roc_auc)
+    plt.plot(fpr, tpr, label = r"{}".format(key) +', AUC = %0.4f' % roc_auc)
   plt.title(name)
   plt.legend(loc = 'lower right',fontsize='x-small')
   plt.plot([0, 1], [0, 1],'r--')
@@ -39,9 +42,48 @@ def DrawMultipleROCCurves(act,pred,wt,output="roc_curve",name="ROC"):
   plt.xlabel('False Positive Rate')
   plt.draw()
   plt.savefig("plots/"+output+".pdf")
+  print "plots/"+output+".pdf created"
   plt.close()
 
-
+def DrawMultipleROCCurvesOnOnePage(act_dict,pred_dict,wt_dict,output="combined_roc_curves",len_x=3,len_y=3):
+  plt.rcParams.update({'font.size': 3})
+  fig, axs = plt.subplots(len_x,len_y)
+  plt.subplots_adjust(left=0.05, 
+                      bottom=0.05, 
+                      right=0.95, 
+                      top=0.95, 
+                      wspace=0.2, 
+                      hspace=0.3)
+  i = 0
+  j = 0
+  for name, act in act_dict.iteritems():
+    ind = 0
+    max_roc_auc = 0
+    max_roc_auc_ind = 0
+    for key,val in act.iteritems():
+      fpr, tpr, threshold = metrics.roc_curve(act_dict[name][key], pred_dict[name][key], sample_weight=wt_dict[name][key])
+      roc_auc = roc_auc_score(act_dict[name][key], pred_dict[name][key], sample_weight=wt_dict[name][key])
+      axs[i,j].plot(fpr, tpr, label = r"${}$".format(key) +', AUC = %0.4f' % roc_auc)
+      if roc_auc > max_roc_auc: 
+        max_roc_auc = 1*roc_auc
+        max_roc_auc_ind = 1*ind
+      ind += 1
+    axs[i,j].set_title(r"{}".format(name))
+    leg = axs[i,j].legend(loc = 'lower right')
+    axs[i,j].plot([0, 1], [0, 1],'r--')
+    axs[i,j].set_xlim([0, 1])
+    axs[i,j].set_ylim([0, 1])
+    axs[i,j].set_ylabel('True Positive Rate')
+    axs[i,j].set_xlabel('False Positive Rate')
+    for ind_leg, text in enumerate(leg.get_texts()):
+      if max_roc_auc_ind == ind_leg:
+        plt.setp(text, color = 'r')
+    i += 1
+    if i % len_x == 0:
+      i = 0
+      j += 1
+  fig.savefig("plots/"+output+".pdf")
+  print "plots/"+output+".pdf created"
 
 def DrawBDTScoreDistributions(pred_dict,output="bdt_score"):
 
