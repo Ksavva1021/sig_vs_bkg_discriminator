@@ -39,6 +39,7 @@ def DrawDistributions(signal_dataframe,bkg_dataframe,variable,xrange,nbins,chann
     plt.ylabel('Density')
     plt.xlim(x_lower_bound,x_upper_bound)
     plt.savefig("{}{}_{}.png".format(location,channel,variable))
+    plt.close()
 
 
 def DrawMultipleROCCurves(act,pred,wt,output="roc_curve",name="ROC"):
@@ -154,7 +155,6 @@ def DrawFeatureImportance(model,imp_type,output="feature_importance"):
   ax = plot_importance(model, importance_type = imp_type, xlabel = imp_type)
   ax.tick_params(axis='y', labelsize=5)
   ax.figure.savefig("plots/"+output+".pdf")
-  
 
 def heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw={}, cbarlabel="", **kwargs):
