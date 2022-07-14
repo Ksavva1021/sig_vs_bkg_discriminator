@@ -264,12 +264,10 @@ class Dataframe:
     with open(data["params_file"]) as pf:
       params = json.load(pf)
 
-
     self.file_location = data["file_location"]
     self.file_ext = data["file_ext"]
 
     self.AddColumns([data["weights"]]+variables)
-
 
     for en, opt in data["add_sel"].items():
       for f in opt["files"]:

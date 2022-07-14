@@ -6,7 +6,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import confusion_matrix
 from xgboost import plot_importance
 import numpy as np
-
+import seaborn as sns
 def DrawROCCurve(act,pred,wt,output="roc_curve"):
 
   fpr, tpr, threshold = metrics.roc_curve(act, pred,sample_weight=wt)
@@ -25,6 +25,21 @@ def DrawROCCurve(act,pred,wt,output="roc_curve"):
   plt.savefig("plots/"+output+".pdf")
   print "plots/"+output+".pdf created"
   plt.close()
+
+
+def DrawDistributions(signal_dataframe,bkg_dataframe,variable,xrange,nbins,channel="channel",location="plots/Distributions/"):
+    x_lower_bound = xrange[0]
+    x_upper_bound = xrange[1]
+    plt.figure()
+    sns.distplot(signal_dataframe['{}'.format(variable)],  kde=True, hist_kws={"color": "k","range": [x_lower_bound,x_upper_bound]},kde_kws={"color": "k","clip":[x_lower_bound,x_upper_bound]}, label='Signal',bins = nbins)
+    sns.distplot(bkg_dataframe['{}'.format(variable)],  kde=True,hist_kws={"color": "g","range": [x_lower_bound,x_upper_bound]},kde_kws={"color": "g","clip":[x_lower_bound,x_upper_bound]}, label='bkg',bins = nbins)
+    plt.legend(prop={'size': 12})
+    plt.title('{}_{}'.format(channel,variable))
+    plt.xlabel('{}'.format(variable))
+    plt.ylabel('Density')
+    plt.xlim(x_lower_bound,x_upper_bound)
+    plt.savefig("{}{}_{}.png".format(location,channel,variable))
+
 
 def DrawMultipleROCCurves(act,pred,wt,output="roc_curve",name="ROC"):
 
