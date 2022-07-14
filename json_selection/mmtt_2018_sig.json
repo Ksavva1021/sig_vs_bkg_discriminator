@@ -2,7 +2,15 @@
     "add_sel": {
         "signal": {
             "files": [
+<<<<<<< HEAD
 		"phi100A60To4Tau"
+=======
+
+		"phi100A60To4Tau"
+		
+
+	
+>>>>>>> c02b51e4e4368e535d58401b366caa183da5cf45
             ], 
             "sel": "(1)", 
             "weight": 1
@@ -14,4 +22,8 @@
     "file_location": "/vols/cms/gu18/Offline/output/4tau/2018_2106",
     "params_file": "/vols/cms/ks1021/4tau/CMSSW_10_2_19/src/UserCode/ICHiggsTauTau/Analysis/4tau/scripts/params_UL_2018.json",
     "weights": "wt_dysoup*wt_wsoup*wt_mc_sign"
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> c02b51e4e4368e535d58401b366caa183da5cf45
