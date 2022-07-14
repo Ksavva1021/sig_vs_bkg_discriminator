@@ -2,7 +2,7 @@
     "add_sel": {
         "signal": {
             "files": [
-		"phi100A60To4Tau"
+		"phi300A150To4Tau"
             ], 
             "sel": "(1)", 
             "weight": 1
