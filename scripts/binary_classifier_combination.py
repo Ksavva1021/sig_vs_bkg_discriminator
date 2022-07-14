@@ -177,10 +177,10 @@ for key in train_dedicated:
    xgb_model.fit(X_train_dedicated[key], y_train_dedicated[key], sample_weight=wt_train_dedicated[key])
    probs = xgb_model.predict_proba(X_test_dedicated[key])
    preds[key] = probs[:,1]
-   DrawFeatureImportance(xgb_model,"gain","bc_feature_importance_gain_{}".format(key))
+   DrawFeatureImportance(xgb_model,"gain","bc_feature_importance_gain_{}_HMP".format(key))
    #DrawFeatureImportance(xgb_model,"weight","bc_feature_importance_weight{}".format(key))
    
-DrawMultipleROCCurves(y_test_dedicated,preds,wt_test_dedicated)
+#DrawMultipleROCCurves(y_test_dedicated,preds,wt_test_dedicated,output="roc_curve_HighMassPoint")
 
 print "<< Training finished >>"
 
