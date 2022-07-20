@@ -21,6 +21,7 @@ class Dataframe:
     self.modified_columns = []
     self.variables_for_modified = []
     self.scale_column = {}
+    self.add_columns_not_from_file = {}
     self.file_location = ''
     self.file_ext = ''
     self.dataframe = None
@@ -115,6 +116,20 @@ class Dataframe:
           split_strings[len(split_strings)-1] += ch
 
     return split_strings
+
+  def AddColumnsNotFromFile(self,filenames,column_names,column_values,extra_name=None):
+
+    if isinstance(filenames, str):
+      filenames = [filenames]
+    elif not isinstance(filenames, list):
+      raise TypeError
+
+    for ind, column_name in enumerate(column_names):
+      if column_name not in self.add_columns_not_from_file.keys(): self.add_columns_not_from_file[column_name] = {}
+      for filename in filenames:
+        filename_en = "{} ({})".format(filename,extra_name)
+        self.add_columns_not_from_file[column_name][filename_en] = column_values[ind]
+
 
   def AddRootFiles(self,root_files,tree_name="ntuple"):
 
@@ -222,7 +237,7 @@ class Dataframe:
     get_variables = set(self.columns+self.variables_for_selection+self.variables_for_modified)
     remove_list = list(set(get_variables)-set(self.columns))
     for ind, f in enumerate(self.root_files):
-      
+     
       # Get dataframe from root file
       if self.file_location[-1] == "/":
         tree = uproot.open(self.file_location+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]
@@ -249,12 +264,17 @@ class Dataframe:
       # Drop unneeded columns
       df = df.drop(remove_list,axis=1)
 
+      # Add columns not from root files
+      for col_key, col_val in self.add_columns_not_from_file.items():
+        df.loc[:,col_key] = col_val[f]
+
       # Combine dataframes
       if ind == 0:
         total_df = df.copy(deep=True)
       else:
         total_df = pd.concat([total_df,df], ignore_index=True, sort=False)
 
+    total_df = total_df.reindex(sorted(total_df.columns), axis=1)
     self.dataframe = total_df
 
   def LoadRootFilesFromJson(self,json_file,variables,specific_file=None,quiet=False):
@@ -277,8 +297,10 @@ class Dataframe:
           self.AddRootFiles([f],tree_name="ntuple") 
           self.AddRootSelection([f],opt["sel"],extra_name=en)
           self.ScaleColumn([f],data["weights"],opt["weight"],extra_name=en)
+          if "add_column_names" in data: self.AddColumnsNotFromFile([f],data["add_column_names"],opt["add_column_vals"],extra_name=en)
           if f[-1] not in ["A","B","C","D","E","F","G","H"]:
             self.ScaleColumn([f],data["weights"],data["lumi"]*params[f]['xs']/params[f]['evt'],extra_name=en)
+
 
     self.AddBaselineRootSelection(data["baseline_sel"])  
     if not quiet: self.PrintRootFiles()
@@ -286,6 +308,7 @@ class Dataframe:
     self.GetDataframe()
 
     self.dataframe = self.dataframe.rename(columns={data["weights"]:'weights'})
+
 
   def NormaliseWeights(self,column="weights",total_scale=1000000,train_frac=None,test_frac=None):
     if train_frac == None and test_frac == None:

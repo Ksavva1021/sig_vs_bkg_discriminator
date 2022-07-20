@@ -123,6 +123,18 @@ phi_to_test_on = [100,200,300]
 A_to_test_on = [60,100,150]
 
 
+weights = {
+           "phi100A60To4Tau":50,
+           "phi200A60To4Tau":4,
+           "phi300A60To4Tau":4,
+           "phi100A100To4Tau":50,
+           "phi200A100To4Tau":1,
+           "phi300A100To4Tau":4,
+           "phi100A150To4Tau":4,
+           "phi200A150To4Tau":4,
+           "phi300A150To4Tau":4
+           }
+
 if not args.load:
   print "<< Making dataframe >>"  
 
@@ -148,8 +160,9 @@ if not args.load:
       count_edges = (mphi == phi_to_train_on[0] or mphi == phi_to_train_on[-1]) + (mA == A_to_train_on[0] or mA == A_to_train_on[-1])
       scale = float(args.edge_ratios.split(":")[count_edges])
       sum_scale = (4*float(args.edge_ratios.split(":")[2])) + (((2*(len(phi_to_train_on)-2)) + 2*(len(A_to_train_on)-2))*float(args.edge_ratios.split(":")[1])) + (((len(phi_to_train_on)-2)*(len(A_to_train_on)-2))*float(args.edge_ratios.split(":")[0]))
-      print filename, scale, sum_scale
       sig_df[filename].NormaliseWeights(test_frac=1.0,train_frac=scale/sum_scale)
+      #sig_df[filename].NormaliseWeights(test_frac=1.0,train_frac=float(weights[filename])/sum(weights.values()))
+
       sig_df[filename].dataframe.loc[:,"mphi"] = mphi
       sig_df[filename].dataframe.loc[:,"mA"] = mA
 
@@ -298,16 +311,14 @@ print "<< Running parametric training >>"
 if args.grid_search:
   param_grid = {
                 'learning_rate': [.1],
-                'n_estimators': [300,400,500,600,700,800,900,1000],
+                'n_estimators': [300,400],
                 'colsample_bytree': [0.7],
-                'max_depth': [3,4,5,6,7,8,9],
+                'max_depth': [9,10],
                 'reg_alpha': [0.9],
                 'reg_lambda': [0.4],
                 'subsample': [1.0],
                 'min_child_weight': [3]
                 }
-
-  param_grid = {"objective": ["binary:logistic"], "seed": [0], "n_estimators": [750], "learning_rate": [0.05], "gamma": [0.5], "max_depth": [4], "min_child_weight": [0.0], "subsample": [1.0], "colsample_bytree": [1.0], "reg_alpha": [0.0], "reg_lambda": [1.0]}
 
   print "Performing grid search for parameters:"
   print param_grid
@@ -367,7 +378,7 @@ else:
                                   reg_alpha = 1.1,
                                   reg_lambda = 1.3
                                   )
-  
+  print xgb_model.get_xgb_params()
   xgb_model.fit(X_train, y_train, sample_weight=wt_train)
 
 pkl.dump(xgb_model,open("BDTs/pBDT_{}_{}.pkl".format(args.channel,args.year), "wb"))
