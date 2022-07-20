@@ -29,6 +29,5 @@ variables = [
              ]
 
 bkg_df = Dataframe()
-bkg_df.LoadRootFilesFromJson("json_selection/{}_{}_bkg_test.json".format(args.channel,args.year),variables,quiet=(args.verbosity<2))
-#bkg_df.LoadRootFilesFromJson("json_selection/{}_{}_bkg.json".format(args.channel,args.year),variables,quiet=(args.verbosity<2))
+bkg_df.LoadRootFilesFromJson("json_selection/ff_data_fail.json",variables,quiet=(args.verbosity<2))
 print bkg_df.dataframe

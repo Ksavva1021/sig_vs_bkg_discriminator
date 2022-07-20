@@ -1,0 +1,17 @@
+{
+    "add_sel": {
+        "signal": {
+            "files": [
+		"phi300A150To4Tau"
+            ], 
+            "sel": "(1)", 
+            "weight": 1
+        }
+    }, 
+    "baseline_sel": "(iso_1<0.15 && iso_2<0.15 && deepTauVsJets_vvvloose_3>0.5 && deepTauVsMu_vloose_3>0.5 && deepTauVsEle_vvloose_3>0.5 && deepTauVsJets_vvvloose_4>0.5 && deepTauVsMu_vloose_4>0.5 && deepTauVsEle_vvloose_4>0.5 && q_sum == 0)", 
+    "file_ext": "_emtt_2018.root", 
+    "lumi": 59740,
+    "file_location": "/vols/cms/gu18/Offline/output/4tau/2018_2106",
+    "params_file": "/vols/cms/ks1021/4tau/CMSSW_10_2_19/src/UserCode/ICHiggsTauTau/Analysis/4tau/scripts/params_UL_2018.json",
+    "weights": "wt_dysoup*wt_wsoup*wt_mc_sign"
+}

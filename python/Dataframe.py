@@ -43,7 +43,6 @@ class Dataframe:
       if i[0].isalpha() and i not in self.func_dict.keys() and i not in self.variables_for_selection:
         self.variables_for_selection.append(i)
 
- 
   def __ConvetSplitStrings__(self,split_strings):
     # Change operator names to python
     for ind, val in enumerate(split_strings):
@@ -241,14 +240,25 @@ class Dataframe:
       # Get dataframe from root file
       if self.file_location[-1] == "/":
         tree = uproot.open(self.file_location+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]
+        
       else:
-        tree = uproot.open(self.file_location+"/"+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]
-      df = 1*tree.pandas.df(get_variables)
-
-      # Cut dataframe
-      if not self.root_selection[f] == "(1)":
-        df = eval(self.python_selection[f])
-
+        tree = uproot.open(self.file_location+"/"+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]      
+      
+      batches = 20
+      events_per_batch = tree.numentries / batches
+      start = 0
+      temp_df = pd.DataFrame()
+      for i in range(batches):
+        end = (i+1) * events_per_batch 
+        df = 1*tree.pandas.df(get_variables,entrystart=start,entrystop=end)
+        # Cut dataframe
+        if not self.root_selection[f] == "(1)":
+           df = eval(self.python_selection[f])
+        temp_df = pd.concat([temp_df,df], ignore_index=True, sort=False)      
+        start = end
+      
+      df = temp_df.copy(deep=True)
+        
       # Calculate modified variables
       for mod_var in self.modified_columns:
         df.loc[:,mod_var] = eval(''.join(self.__AllSplitStringsSteps__(mod_var)))
@@ -284,12 +294,10 @@ class Dataframe:
     with open(data["params_file"]) as pf:
       params = json.load(pf)
 
-
     self.file_location = data["file_location"]
     self.file_ext = data["file_ext"]
 
     self.AddColumns([data["weights"]]+variables)
-
 
     for en, opt in data["add_sel"].items():
       for f in opt["files"]:
@@ -298,9 +306,10 @@ class Dataframe:
           self.AddRootSelection([f],opt["sel"],extra_name=en)
           self.ScaleColumn([f],data["weights"],opt["weight"],extra_name=en)
           if "add_column_names" in data: self.AddColumnsNotFromFile([f],data["add_column_names"],opt["add_column_vals"],extra_name=en)
-          if f[-1] not in ["A","B","C","D","E","F","G","H"]:
+          if not "data" in data.keys():
             self.ScaleColumn([f],data["weights"],data["lumi"]*params[f]['xs']/params[f]['evt'],extra_name=en)
-
+          elif not data["data"]:
+            self.ScaleColumn([f],data["weights"],data["lumi"]*params[f]['xs']/params[f]['evt'],extra_name=en)
 
     self.AddBaselineRootSelection(data["baseline_sel"])  
     if not quiet: self.PrintRootFiles()
