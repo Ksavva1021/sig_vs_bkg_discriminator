@@ -42,7 +42,6 @@ class Dataframe:
       if i[0].isalpha() and i not in self.func_dict.keys() and i not in self.variables_for_selection:
         self.variables_for_selection.append(i)
 
- 
   def __ConvetSplitStrings__(self,split_strings):
     # Change operator names to python
     for ind, val in enumerate(split_strings):
@@ -226,14 +225,25 @@ class Dataframe:
       # Get dataframe from root file
       if self.file_location[-1] == "/":
         tree = uproot.open(self.file_location+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]
+        
       else:
-        tree = uproot.open(self.file_location+"/"+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]
-      df = 1*tree.pandas.df(get_variables)
-
-      # Cut dataframe
-      if not self.root_selection[f] == "(1)":
-        df = eval(self.python_selection[f])
-
+        tree = uproot.open(self.file_location+"/"+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]      
+      
+      batches = 20
+      events_per_batch = tree.numentries / batches
+      start = 0
+      temp_df = pd.DataFrame()
+      for i in range(batches):
+        end = (i+1) * events_per_batch 
+        df = 1*tree.pandas.df(get_variables,entrystart=start,entrystop=end)
+        # Cut dataframe
+        if not self.root_selection[f] == "(1)":
+           df = eval(self.python_selection[f])
+        temp_df = pd.concat([temp_df,df], ignore_index=True, sort=False)      
+        start = end
+      
+      df = temp_df.copy(deep=True)
+        
       # Calculate modified variables
       for mod_var in self.modified_columns:
         df.loc[:,mod_var] = eval(''.join(self.__AllSplitStringsSteps__(mod_var)))
@@ -277,7 +287,6 @@ class Dataframe:
           self.ScaleColumn([f],data["weights"],opt["weight"],extra_name=en)
           if f[-1] not in ["A","B","C","D","E","F","G","H"]:
             self.ScaleColumn([f],data["weights"],data["lumi"]*params[f]['xs']/params[f]['evt'],extra_name=en)
-
     self.AddBaselineRootSelection(data["baseline_sel"])  
     if not quiet: self.PrintRootFiles()
 
