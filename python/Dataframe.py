@@ -302,7 +302,7 @@ class Dataframe:
 
     for en, opt in data["add_sel"].items():
       for f in opt["files"]:
-        if (specific_file == None and in_extra_name != "" and in_extra_name in en) or (specific_file == f and specific_extra_name == None) or (specific_file == f and specific_extra_name == en):
+        if (specific_file == None and in_extra_name == "") or (specific_file == None and in_extra_name != "" and in_extra_name in en) or (specific_file == f and specific_extra_name == None) or (specific_file == f and specific_extra_name == en):
           self.AddRootFiles([f],tree_name="ntuple") 
           self.AddRootSelection([f],opt["sel"],extra_name=en)
           self.ScaleColumn([f],data["weights"],opt["weight"],extra_name=en)
