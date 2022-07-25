@@ -7,6 +7,8 @@ from sklearn.metrics import confusion_matrix
 from xgboost import plot_importance
 import numpy as np
 import seaborn as sns
+import ROOT
+from array import array
 def DrawROCCurve(act,pred,wt,output="roc_curve"):
 
   fpr, tpr, threshold = metrics.roc_curve(act, pred,sample_weight=wt)
@@ -292,3 +294,263 @@ def DrawConfusionMatrix(y_test,preds,wt_test,label,output="confusion_matrix"):
   fig.tight_layout()
   plt.savefig("plots/"+output+".pdf")
 
+def DrawTitle(pad, text, align, scale=1):
+    pad_backup = ROOT.gPad
+    pad.cd()
+    t = pad.GetTopMargin()
+    l = pad.GetLeftMargin()
+    r = pad.GetRightMargin()
+
+    pad_ratio = (float(pad.GetWh()) * pad.GetAbsHNDC()) / \
+        (float(pad.GetWw()) * pad.GetAbsWNDC())
+    if pad_ratio < 1.:
+        pad_ratio = 1.
+
+    textSize = 0.6
+    textOffset = 0.2
+
+    latex = ROOT.TLatex()
+    latex.SetNDC()
+    latex.SetTextAngle(0)
+    latex.SetTextColor(ROOT.kBlack)
+    latex.SetTextFont(42)
+    latex.SetTextSize(textSize * t * pad_ratio * scale)
+
+    y_off = 1 - t + textOffset * t
+    if align == 1:
+        latex.SetTextAlign(11)
+    if align == 1:
+        latex.DrawLatex(l, y_off, text)
+    if align == 2:
+        latex.SetTextAlign(21)
+    if align == 2:
+        latex.DrawLatex(l + (1 - l - r) * 0.5, y_off, text)
+    if align == 3:
+        latex.SetTextAlign(31)
+    if align == 3:
+        latex.DrawLatex(1 - r, y_off, text)
+    pad_backup.cd()
+
+
+def PlotDistributionComparison(x_label,y_label,dist_0,dist_0_name,dist_1,dist_1_name,output_folder,save_name,logx=False,title_left="",title_right=""):
+  ROOT.gROOT.SetBatch(ROOT.kTRUE)
+  dist_0_divide = dist_0.Clone()
+  for i in range(0,dist_0_divide.GetNbinsX()+2): dist_0_divide.SetBinError(i,0)
+
+  dist_1_ratio = dist_1.Clone()
+  dist_1_ratio.Divide(dist_0_divide)
+
+  dist_0_ratio = dist_0.Clone()
+  dist_0_ratio.Divide(dist_0_divide)
+
+  c = ROOT.TCanvas('c','c',600,600)
+
+  pad1 = ROOT.TPad("pad1","pad1",0,0.37,1,1)
+  pad1.SetBottomMargin(0.02)
+  pad1.SetLeftMargin(0.12)
+  if logx: pad1.SetLogx()
+  pad1.Draw()
+  pad1.cd()
+
+  dist_0.Draw("hist SAME")
+  dist_0.SetLineColor(1)
+  dist_0.SetFillColor(38)
+  dist_0.SetStats(0)
+  dist_0.GetXaxis().SetTitle(x_label)
+  dist_0.GetYaxis().SetTitle(y_label)
+  dist_0.GetYaxis().SetTitleOffset(1)
+  dist_0.GetYaxis().SetTitleSize(0.06)
+  dist_0.GetYaxis().SetLabelSize(0.05)
+  dist_0.GetXaxis().SetLabelSize(0)
+
+  dist_0_uncert = dist_0.Clone()
+  dist_0_uncert.SetMarkerSize(0)
+  dist_0_uncert.SetFillColorAlpha(12,0.5)
+  dist_0_uncert.SetLineWidth(0)
+  dist_0_uncert.Draw("e2 same")
+
+  dist_1.Draw("E SAME")
+  dist_1.SetMarkerColor(1)
+  dist_1.SetLineColor(1)
+  dist_1.SetMarkerStyle(19)
+
+
+  l = ROOT.TLegend(0.6,0.65,0.88,0.85);
+  l.SetBorderSize(0)
+  l.AddEntry(dist_0,dist_0_name,"f")
+  l.AddEntry(dist_1,dist_1_name,"lep")
+  l.Draw()
+
+  c.cd()
+  pad2 = ROOT.TPad("pad2","pad2",0,0.05,1,0.35)
+  pad2.SetLeftMargin(0.12)
+  pad2.SetTopMargin(0.03)
+  pad2.SetBottomMargin(0.3)
+  if logx: pad2.SetLogx()
+  pad2.Draw()
+  pad2.cd()
+
+  ratio_line = ROOT.TLine(dist_0.GetBinLowEdge(1),1,dist_0.GetBinLowEdge(dist_0.GetNbinsX()+1),1)
+  dist_0_ratio.SetMarkerSize(0)
+  dist_0_ratio.SetFillColorAlpha(12,0.5)
+  dist_0_ratio.SetLineWidth(0)
+  dist_0_ratio.SetAxisRange(0,2,'Y')
+  dist_0_ratio.GetYaxis().SetNdivisions(4)
+  dist_0_ratio.SetStats(0)
+  dist_0_ratio.GetXaxis().SetLabelSize(0.1)
+  dist_0_ratio.GetYaxis().SetLabelSize(0.1)
+  dist_0_ratio.GetXaxis().SetTitle(x_label)
+  dist_0_ratio.GetYaxis().SetTitle("Ratio")
+  dist_0_ratio.GetYaxis().SetTitleColor(1)
+  dist_0_ratio.GetYaxis().SetTitleSize(0.12)
+  dist_0_ratio.GetYaxis().SetTitleOffset(0.4)
+  dist_0_ratio.GetXaxis().SetTitleSize(0.12)
+  dist_0_ratio.GetXaxis().SetTitleOffset(1.2)
+  if logx:
+    dist_0_ratio.GetXaxis().SetMoreLogLabels()
+    dist_0_ratio.GetXaxis().SetNoExponent()
+
+  dist_1_ratio.SetMarkerColor(1)
+  dist_1_ratio.SetLineColor(1)
+  dist_1_ratio.SetMarkerStyle(19)
+
+  ratio_line_up = ROOT.TLine(dist_0.GetBinLowEdge(1),1.5,dist_0.GetBinLowEdge(dist_0.GetNbinsX()+1),1.5)
+  ratio_line_down = ROOT.TLine(dist_0.GetBinLowEdge(1),0.5,dist_0.GetBinLowEdge(dist_0.GetNbinsX()+1),0.5)
+  ratio_line.SetLineStyle(3)
+  ratio_line_up.SetLineStyle(3)
+  ratio_line_down.SetLineStyle(3)
+  
+  dist_0_ratio.Draw("e2")
+  ratio_line.Draw("l same")
+  ratio_line_up.Draw("l same")
+  ratio_line_down.Draw("l same")
+  dist_1_ratio.Draw("E same")
+
+  DrawTitle(pad1, title_left, 1, scale=1)
+  DrawTitle(pad1, title_right, 3, scale=1)
+
+  c.Update()
+  name = '%(output_folder)s/%(save_name)s.pdf' % vars()
+  c.SaveAs(name)
+  c.Close()
+
+def ReplaceName(name):
+  replace_dict = {
+    "tttt":"#tau_{h}#tau_{h}#tau_{h}#tau_{h}",
+    "mttt":"#mu#tau_{h}#tau_{h}#tau_{h}",
+    "ettt":"e#tau_{h}#tau_{h}#tau_{h}",
+    "emtt":"e#mu#tau_{h}#tau_{h}",
+    "mmtt":" #mu#mu#tau_{h}#tau_{h}",
+    "eett":"ee#tau_{h}#tau_{h}",
+    "2018":"2018 (59.7 fb^{-1})",
+    "mvis_12": "m_{vis}^{12} (GeV)",
+    "mvis_13": "m_{vis}^{13} (GeV)",
+    "mvis_14": "m_{vis}^{14} (GeV)",
+    "mvis_23": "m_{vis}^{23} (GeV)",
+    "mvis_24": "m_{vis}^{24} (GeV)",
+    "mvis_34": "m_{vis}^{34} (GeV)",
+    "pt_1": "p_{T}^{1} (GeV)",
+    "pt_2": "p_{T}^{2} (GeV)",
+    "pt_3": "p_{T}^{3} (GeV)",
+    "pt_4": "p_{T}^{4} (GeV)",
+    "dN/dmvis_12": "dN/dm_{vis}^{12} (1/GeV)",
+    "dN/dmvis_13": "dN/dm_{vis}^{13} (1/GeV)",
+    "dN/dmvis_14": "dN/dm_{vis}^{14} (1/GeV)",
+    "dN/dmvis_23": "dN/dm_{vis}^{23} (1/GeV)",
+    "dN/dmvis_24": "dN/dm_{vis}^{24} (1/GeV)",
+    "dN/dmvis_34": "dN/dm_{vis}^{34} (1/GeV)",
+    "dN/dpt_1": "dN/dp_{T}^{1} (1/GeV)",
+    "dN/dpt_2": "dN/dp_{T}^{2} (1/GeV)",
+    "dN/dpt_3": "dN/dp_{T}^{3} (1/GeV)",
+    "dN/dpt_4": "dN/dp_{T}^{4} (1/GeV)",
+    }
+  if name in replace_dict.keys():
+    return replace_dict[name]
+  else:
+    return name 
+
+def FindRebinning(hist,BinThreshold=100,BinUncertFraction=0.5):
+
+  # getting binning
+  binning = []
+  for i in range(1,hist.GetNbinsX()+2):
+    binning.append(hist.GetBinLowEdge(i))
+
+  # left to right
+  finished = False
+  k = 0
+  while finished == False and k < 1000:
+    k += 1
+    for i in range(1,hist.GetNbinsX()):
+      if hist.GetBinContent(i) != 0: uncert_frac = hist.GetBinError(i)/hist.GetBinContent(i)
+      else: uncert_frac = BinUncertFraction+1
+      if uncert_frac > BinUncertFraction and hist.GetBinContent(i) < BinThreshold:
+        binning.remove(hist.GetBinLowEdge(i+1))
+        hist = RebinHist(hist,binning)
+        break
+      elif i+1 == hist.GetNbinsX():
+        finished = True
+
+  # right to left
+  finished = False
+  k = 0
+  while finished == False and k < 1000:
+    k+= 1
+    for i in reversed(range(2,hist.GetNbinsX()+1)):
+      if hist.GetBinContent(i) != 0: uncert_frac = hist.GetBinError(i)/hist.GetBinContent(i)
+      else: uncert_frac = BinUncertFraction+1
+      if uncert_frac > BinUncertFraction and hist.GetBinContent(i) < BinThreshold:
+        binning.remove(hist.GetBinLowEdge(i))
+        hist = RebinHist(hist,binning)
+        break
+      elif i == 2:
+        finished = True
+
+  return binning
+
+def RebinHist(hist,binning):
+  ROOT.TH1.AddDirectory(ROOT.kFALSE)
+  # getting initial binning
+  initial_binning = []
+  for i in range(1,hist.GetNbinsX()+2):
+    initial_binning.append(hist.GetBinLowEdge(i))
+
+  new_binning = array('f', map(float,binning))
+  hout = ROOT.TH1D(hist.GetName(),'',len(new_binning)-1, new_binning)
+  hout.SetDirectory(0)
+  for i in range(1,hout.GetNbinsX()+1):
+    for j in range(1,hist.GetNbinsX()+1):
+      if hist.GetBinCenter(j) > hout.GetBinLowEdge(i) and hist.GetBinCenter(j) < hout.GetBinLowEdge(i+1):
+        hout.SetBinContent(i,hout.GetBinContent(i)+hist.GetBinContent(j))
+        hout.SetBinError(i,(hout.GetBinError(i)**2+hist.GetBinError(j)**2)**0.5)
+  return hout
+
+
+def DrawClosurePlots(df1, df2, df1_name, df2_name, var_name, var_binning, plot_name="closure_plot", title_left="", title_right=""):
+  if isinstance(var_binning,tuple):
+    bins = array('f', map(float,[(float(var_binning[2]-var_binning[1])/var_binning[0])*i for i in range(0,var_binning[0])]))
+  elif isinstance(var_binning,list):
+    bins = array('f', map(float,var_binning))
+  hout = ROOT.TH1D('hout','',len(bins)-1, bins)
+  hist1 = hout.Clone()
+  hist2 = hout.Clone()
+
+  for index, row in df1.iterrows():
+    hist1.Fill(row[var_name], row["weights"])
+
+  for index, row in df2.iterrows():
+    hist2.Fill(row[var_name], row["weights"])
+
+  # rebin to find good binning
+  if hist1.GetEntries() < hist2.GetEntries():
+    binning = FindRebinning(hist1,BinThreshold=100,BinUncertFraction=0.2)
+  else:
+    binning = FindRebinning(hists,BinThreshold=100,BinUncertFraction=0.2)
+
+  hist1 = RebinHist(hist1,binning)
+  hist2 = RebinHist(hist2,binning)
+
+  hist1.Scale(1.0,"width")
+  hist2.Scale(1.0,"width")
+
+  PlotDistributionComparison(ReplaceName(var_name), ReplaceName("dN/d{}".format(var_name)),hist1, df1_name, hist2, df2_name, "plots", plot_name, title_left=ReplaceName(title_left), title_right=ReplaceName(title_right))
