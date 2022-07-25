@@ -48,10 +48,10 @@ class Dataframe:
     for ind, val in enumerate(split_strings):
       if val in self.variables_for_selection:
         split_strings[ind] = '(df.loc[:,"{}"]'.format(val)
-      elif val in ["*","/"] and (split_strings[ind-1].isdigit() or split_strings[ind+1].isdigit()):
+      elif val in ["*","/","+"] and (split_strings[ind-1].isdigit() or split_strings[ind+1].isdigit()):
         continue
       else:
-        split_strings[ind]= val.replace("&&",")&").replace("||",")|").replace("*",").multiply").replace("/",").divide")
+        split_strings[ind]= val.replace("&&",")&").replace("||",")|").replace("*",").multiply").replace("/",").divide").replace("+",")+")
 
     split_strings.append(")")
 
@@ -275,8 +275,9 @@ class Dataframe:
       df = df.drop(remove_list,axis=1)
 
       # Add columns not from root files
-      for col_key, col_val in self.add_columns_not_from_file.items():
-        df.loc[:,col_key] = col_val[f]
+      if len(df) > 0:
+        for col_key, col_val in self.add_columns_not_from_file.items():
+          df.loc[:,col_key] = col_val[f]
 
       # Combine dataframes
       if ind == 0:
@@ -287,7 +288,7 @@ class Dataframe:
     total_df = total_df.reindex(sorted(total_df.columns), axis=1)
     self.dataframe = total_df
 
-  def LoadRootFilesFromJson(self,json_file,variables,specific_file=None,quiet=False):
+  def LoadRootFilesFromJson(self,json_file,variables,specific_file=None,specific_extra_name=None,quiet=False,in_extra_name=""):
     with open(json_file) as jf:
       data = json.load(jf)
 
@@ -301,7 +302,7 @@ class Dataframe:
 
     for en, opt in data["add_sel"].items():
       for f in opt["files"]:
-        if specific_file == None or specific_file == f:
+        if (specific_file == None and in_extra_name != "" and in_extra_name in en) or (specific_file == f and specific_extra_name == None) or (specific_file == f and specific_extra_name == en):
           self.AddRootFiles([f],tree_name="ntuple") 
           self.AddRootSelection([f],opt["sel"],extra_name=en)
           self.ScaleColumn([f],data["weights"],opt["weight"],extra_name=en)
@@ -407,6 +408,19 @@ class Dataframe:
     tree = array2tree(arr, name=key, tree=tree)
     tree.Write(key, ROOT.TFile.kOverwrite)
     root_file.Close()
+  
+  def SplitTrainTestXWts(self):
+    train_df = self.dataframe.loc[(self.dataframe.loc[:,"train"] == 1)]
+    test_df = self.dataframe.loc[(self.dataframe.loc[:,"train"] == 0)]
+    
+    wt_train_df = train_df.loc[:,"weights"]
+    wt_test_df = test_df.loc[:,"weights"]
 
+    train_df = train_df.drop(["weights","train"],axis=1)
+    test_df = test_df.drop(["weights","train"],axis=1)
+    
+    return train_df, wt_train_df, test_df, wt_test_df
+    
+ 
 
 

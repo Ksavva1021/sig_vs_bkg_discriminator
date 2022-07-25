@@ -27,7 +27,7 @@ class p_xgboost(xgb.XGBClassifier):
 
     unique_entries = []
     for n in p_names:
-      unique_entries.append(df[n].unique):
+      unique_entries.append(df[n].unique)
 
     iterate_over = list(itertools.product(*unique_entries))
 
