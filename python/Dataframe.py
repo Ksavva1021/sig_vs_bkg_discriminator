@@ -229,7 +229,7 @@ class Dataframe:
       else:
         tree = uproot.open(self.file_location+"/"+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]      
       
-      batches = 120
+      batches = 500
       events_per_batch = tree.numentries / batches
       remainder = tree.numentries // batches
       start = 0
