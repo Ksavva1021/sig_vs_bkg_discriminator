@@ -244,8 +244,9 @@ class Dataframe:
       else:
         tree = uproot.open(self.file_location+"/"+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]      
       
-      batches = 20
+      batches = 500
       events_per_batch = tree.numentries / batches
+      remainder = tree.numentries // batches
       start = 0
       temp_df = pd.DataFrame()
       for i in range(batches):
@@ -256,6 +257,11 @@ class Dataframe:
            df = eval(self.python_selection[f])
         temp_df = pd.concat([temp_df,df], ignore_index=True, sort=False)      
         start = end
+      if (remainder != 0):
+        df = 1*tree.pandas.df(get_variables,entrystart=(tree.numentries-remainder),entrystop=tree.numentries)
+        if not self.root_selection[f] == "(1)":
+           df = eval(self.python_selection[f])
+        temp_df = pd.concat([temp_df,df], ignore_index=True, sort=False) 
       
       df = temp_df.copy(deep=True)
         
