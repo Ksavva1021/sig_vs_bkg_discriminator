@@ -105,7 +105,6 @@ def DrawBDTScoreDistributions(pred_dict,output="bdt_score"):
 
   for key, val in pred_dict.items():
     _, bins, _ = plt.hist(val["preds"], weights=val["weights"] ,bins=100, histtype='step', label=key)
-
   plt.xlabel("BDT Score")
   plt.xlim(bins[0], bins[-1])
   plt.legend(loc='best')
