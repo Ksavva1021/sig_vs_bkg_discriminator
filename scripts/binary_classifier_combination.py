@@ -16,6 +16,7 @@ parser.add_argument('--channel', help= 'Channel to train BDT for', default='tt')
 parser.add_argument('--year', help= 'Year to train BDT for', default='2018')
 parser.add_argument('--load', help= 'Load dataframe from file',  action='store_true')
 parser.add_argument('--stop', help= 'Stop before training',  action='store_true')
+parser.add_argument('--cross', help= 'Perform cross-channel training',  action='store_true')
 args = parser.parse_args()
 
 variables = ["pt_1", "pt_2","pt_3","pt_4","dphi_12","dphi_13","dphi_14","dphi_23","dphi_24","dphi_34","dR_12","dR_13","dR_14","dR_23",
@@ -112,43 +113,44 @@ for ch in channels:
 
 # set up train and test separated dataframes
 # channels = ["eett","emtt","ettt","mmtt","mttt","tttt"]
-selection = "eett"
-for i in ["Cross_Channel","Cross_Channel_eett","Cross_Channel_emtt","Cross_Channel_ettt","Cross_Channel_mmtt","Cross_Channel_mttt","Cross_Channel_tttt"]:
-    train, test = train_test_split(df_total,test_size=0.5, random_state=42)
-    train_dedicated["{}".format(i)] = train
-    test_dedicated["{}".format(i)] = test
+selection = " "
+if args.cross:
+    for i in ["Cross_Channel","Cross_Channel_eett","Cross_Channel_emtt","Cross_Channel_ettt","Cross_Channel_mmtt","Cross_Channel_mttt","Cross_Channel_tttt"]:
+        train, test = train_test_split(df_total,test_size=0.5, random_state=42)
+        train_dedicated["{}".format(i)] = train
+        test_dedicated["{}".format(i)] = test
 
-    y_train = train.loc[:,"y"]
-    wt_train = train.loc[:,"weights"]
-    X_train = train.drop(["y","weights"],axis=1)
-    y_train_dedicated["{}".format(i)] = y_train
-    wt_train_dedicated["{}".format(i)] = wt_train
-    X_train_dedicated["{}".format(i)] = X_train
+        y_train = train.loc[:,"y"]
+        wt_train = train.loc[:,"weights"]
+        X_train = train.drop(["y","weights"],axis=1)
+        y_train_dedicated["{}".format(i)] = y_train
+        wt_train_dedicated["{}".format(i)] = wt_train
+        X_train_dedicated["{}".format(i)] = X_train
 
-    if i == "Cross_Channel_eett":
-        selection = "eett"
-        test = test[test[selection] != 0]
-    if i == "Cross_Channel_emtt":
-        selection = "emtt"
-        test = test[test[selection] != 0]
-    if i == "Cross_Channel_ettt":
-        selection = "ettt"
-        test = test[test[selection] != 0]
-    if i == "Cross_Channel_mmtt":
-        selection = "mmtt"
-        test = test[test[selection] != 0]
-    if i == "Cross_Channel_mttt":
-        selection = "mttt"
-        test = test[test[selection] != 0]
-    if i == "Cross_Channel_tttt":
-        selection = "tttt"
-        test = test[test[selection] != 0]        
-    y_test = test.loc[:,"y"]
-    wt_test = test.loc[:,"weights"]
-    X_test = test.drop(["y","weights"],axis=1)
-    y_test_dedicated["{}".format(i)] = y_test
-    wt_test_dedicated["{}".format(i)] = wt_test
-    X_test_dedicated["{}".format(i)] = X_test
+        if i == "Cross_Channel_eett":
+            selection = "eett"
+            test = test[test[selection] != 0]
+        if i == "Cross_Channel_emtt":
+            selection = "emtt"
+            test = test[test[selection] != 0]
+        if i == "Cross_Channel_ettt":
+            selection = "ettt"
+            test = test[test[selection] != 0]
+        if i == "Cross_Channel_mmtt":
+            selection = "mmtt"
+            test = test[test[selection] != 0]
+        if i == "Cross_Channel_mttt":
+            selection = "mttt"
+            test = test[test[selection] != 0]
+        if i == "Cross_Channel_tttt":
+            selection = "tttt"
+            test = test[test[selection] != 0]        
+        y_test = test.loc[:,"y"]
+        wt_test = test.loc[:,"weights"]
+        X_test = test.drop(["y","weights"],axis=1)
+        y_test_dedicated["{}".format(i)] = y_test
+        wt_test_dedicated["{}".format(i)] = wt_test
+        X_test_dedicated["{}".format(i)] = X_test
 
 
 if args.stop:
@@ -177,11 +179,13 @@ for key in train_dedicated:
    xgb_model.fit(X_train_dedicated[key], y_train_dedicated[key], sample_weight=wt_train_dedicated[key])
    probs = xgb_model.predict_proba(X_test_dedicated[key])
    preds[key] = probs[:,1]
-   DrawFeatureImportance(xgb_model,"gain","bc_feature_importance_gain_{}_HMP".format(key))
+   
    #DrawFeatureImportance(xgb_model,"weight","bc_feature_importance_weight{}".format(key))
    
-#DrawMultipleROCCurves(y_test_dedicated,preds,wt_test_dedicated,output="roc_curve_HighMassPoint")
+DrawMultipleROCCurves(y_test_dedicated,preds,wt_test_dedicated,output="Scenario5/roc_curve_LowMassPoint")
 
+for key in train_dedicated:
+    DrawFeatureImportance(xgb_model,"gain","Scenario5/bc_feature_importance_gain_{}_LMP".format(key))
 print "<< Training finished >>"
 
 

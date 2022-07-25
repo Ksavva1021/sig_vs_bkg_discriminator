@@ -18,8 +18,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--year', help= 'Year to train BDT for', default='2018')
 parser.add_argument('--scenario', help = 'Scenario to run', default='s1')
 parser.add_argument('--load', help= 'Load dataframe from file',  action='store_true')
-parser.add_argument('--parameter_finetuning', help = 'Perform parameter finetuning', action='store_true')
-parser.add_argument('--use_deeptau', help= 'Use the deeptau scores for training',  action='store_true')
+parser.add_argument('--use_deeptauVsJets', help= 'Use the deeptau scores for training',  action='store_true')
+parser.add_argument('--use_deeptauVsEle', help= 'Use the deeptau scores for training',  action='store_true')
+parser.add_argument('--use_deeptauVsMu', help= 'Use the deeptau scores for training',  action='store_true')
 parser.add_argument('--draw_distribution', help= 'Draw variable distributions',  action='store_true')
 args = parser.parse_args()
 
@@ -28,9 +29,19 @@ variables = ["pt_1", "pt_2","pt_3","pt_4","dphi_12","dphi_13","dphi_14","dphi_23
 "dR_24","dR_34","mt_1","mt_2","mt_3","mt_4","mt_lep_12","mt_lep_13","mt_lep_14","mt_lep_23","mt_lep_24","mt_lep_34",
 "mvis_12","mvis_13","mvis_14","mvis_23","mvis_24","mvis_34","q_1","q_2","q_3","q_4"]
 
-if args.use_deeptau:
+if args.use_deeptauVsJets:
   variables += [
                 "deepTauVsJets_iso_1","deepTauVsJets_iso_2","deepTauVsJets_iso_3","deepTauVsJets_iso_4"
+                ]
+
+if args.use_deeptauVsEle:
+  variables += [
+                "deepTauVsEle_iso_1","deepTauVsEle_iso_2","deepTauVsEle_iso_3","deepTauVsEle_iso_4"
+                ]
+
+if args.use_deeptauVsMu:
+  variables += [
+                "deepTauVsMu_iso_1","deepTauVsMu_iso_2","deepTauVsMu_iso_3","deepTauVsMu_iso_4"
                 ]
 
 abs_variables = ["dphi_12","dphi_13","dphi_14","dphi_23","dphi_24","dphi_34","dR_12","dR_13","dR_14","dR_23",
@@ -232,7 +243,7 @@ for ch in channels:
    print(AMS)
       
    # test 
-   bins_array = np.linspace(0,1,1000,endpoint=True)
+   bins_array = np.linspace(0,1,100,endpoint=True)
    hist1,bins1 = np.histogram(preds1, bins = bins_array, weights = wt1)
    hist0,bins0 = np.histogram(preds0, bins = bins_array, weights = wt0)
    total = np.sum(hist1)
@@ -242,6 +253,7 @@ for ch in channels:
    plt.figure()
    plt.hist(preds1,bins=bins_array,weights=wt1,alpha = 0.5,label='signal',histtype='step')
    plt.hist(preds0,bins=bins_array,weights=wt0,alpha = 0.5,label='bkg',histtype='step')
+   plt.ylim(0,100)
    plt.legend(loc='best')
    plt.savefig("plots/{}/{}/BDT_Score_Distribution".format(args.scenario,ch))
 
@@ -249,9 +261,9 @@ for ch in channels:
        if percentage < 0.68:
           running_total += item
           percentage = running_total/total
-          #print(i,item,running_total1,total,percentage)
+          #if ch == "mmtt":
+            #print(i,item,running_total,total,percentage)
        else:
-          cut1 = bins1[i]
           sig_area = sum(hist1[i:])
           bkg_area = sum(hist0[i:])
           AMS = np.sqrt(2*((sig_area+bkg_area)*np.log(1 + (sig_area/bkg_area))-sig_area))
