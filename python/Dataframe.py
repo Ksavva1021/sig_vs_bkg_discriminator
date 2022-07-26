@@ -246,7 +246,9 @@ class Dataframe:
       
       batches = 500
       events_per_batch = tree.numentries / batches
-      remainder = tree.numentries // batches
+      #print("events per batch",events_per_batch)
+      remainder = tree.numentries % batches
+      #print("remainder",remainder)
       start = 0
       temp_df = pd.DataFrame()
       for i in range(batches):
