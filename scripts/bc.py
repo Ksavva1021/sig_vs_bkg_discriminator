@@ -12,6 +12,7 @@ import numpy as np
 from collections import OrderedDict
 import ROOT
 import math
+import sys
 
 # Update
 parser = argparse.ArgumentParser()
@@ -48,7 +49,7 @@ abs_variables = ["dphi_12","dphi_13","dphi_14","dphi_23","dphi_24","dphi_34","dR
 "dR_24","dR_34"]
 
 channels = ["tttt","emtt","ettt","mmtt","mttt","eett"]
-#channels = ["mttt"]
+#channels = ["tttt"]
 if not (args.load):
   print "<< Making dataframe >>"  
   train_dataframes = []
@@ -143,7 +144,7 @@ for ch in channels:
   test_dedicated = df_test_total[(df_test_total["{}".format(ch)] != 0)]
   test_dedicated = test_dedicated.loc[:, (test_dedicated != 0).any(axis=0)]
   test_dedicated = test_dedicated.drop("{}".format(ch),axis=1)
-
+  
   test_sig_dict['{}'.format(ch)]  = test_dedicated[test_dedicated['y'] == 1]
   test_bkg_dict['{}'.format(ch)] = test_dedicated[test_dedicated['y'] == 0]  
 
@@ -161,7 +162,6 @@ for ch in channels:
   wt1_dict["{}".format(ch)] = t1_dict["{}".format(ch)].loc[:,"weights"]
   xt0_dict["{}".format(ch)] = t0_dict["{}".format(ch)].drop(["y","weights"],axis=1)
   xt1_dict["{}".format(ch)] = t1_dict["{}".format(ch)].drop(["y","weights"],axis=1)
-
 if args.draw_distribution:  
     for ch in channels:
         if ch == 'tttt':
@@ -188,7 +188,7 @@ for ch in channels:
    weight_eval_set = [wt_train_dict['{}'.format(ch)],wt_test_dict['{}'.format(ch)]]
    xgb_model.fit(X_train_dict['{}'.format(ch)], y_train_dict['{}'.format(ch)], eval_metric = "auc",sample_weight=wt_train_dict['{}'.format(ch)], eval_set = eval_set,sample_weight_eval_set = weight_eval_set,verbose = False)
    
-   #DrawFeatureImportance(xgb_model,"weight","{}/{}/feature_importance".format(args.scenario,ch))
+   DrawFeatureImportance(xgb_model,"weight","{}/{}/feature_importance".format(args.scenario,ch))
    
    probs = xgb_model.predict_proba(X_test_dict['{}'.format(ch)])
    preds = probs[:,1]
@@ -222,9 +222,7 @@ for ch in channels:
       if percentage < 0.68:
          running_integral += sig_hist.GetBinContent(j)
          percentage = running_integral/integral
-         #print(j,sig_hist.GetBinContent(j),running_integral,integral,percentage)
       else:
-         print(j)
          cut = j
          break
 
@@ -233,7 +231,7 @@ for ch in channels:
    
    bkg_error= ROOT.Double()
    bkg_integral = bkg_hist.IntegralAndError(cut,bkg_hist.GetNbinsX()+1,bkg_error)
-   
+   print("--1--") 
    print(sig_integral,sig_error)
    print(bkg_integral,bkg_error)
    val0 = sig_integral/np.sqrt(bkg_integral) 
@@ -241,38 +239,71 @@ for ch in channels:
    print(val0,unc0)
    AMS = np.sqrt(2*((sig_integral+bkg_integral)*np.log(1 + (sig_integral/bkg_integral))-sig_integral))
    print(AMS)
-      
-   # test 
-   bins_array = np.linspace(0,1,100,endpoint=True)
-   hist1,bins1 = np.histogram(preds1, bins = bins_array, weights = wt1)
-   hist0,bins0 = np.histogram(preds0, bins = bins_array, weights = wt0)
-   total = np.sum(hist1)
-   running_total = 0
-   percentage = 0
-   cut1 = 0
-   plt.figure()
-   plt.hist(preds1,bins=bins_array,weights=wt1,alpha = 0.5,label='signal',histtype='step')
-   plt.hist(preds0,bins=bins_array,weights=wt0,alpha = 0.5,label='bkg',histtype='step')
-   plt.ylim(0,100)
-   plt.legend(loc='best')
-   plt.savefig("plots/{}/{}/BDT_Score_Distribution".format(args.scenario,ch))
+   
+   print("--2--")
+   running_integral = 0
+   sig_yield_looseWP = 0
+   cut_ = 0
+   for j in reversed(range(sig_hist.GetNbinsX()+1)):
+      if ch == 'tttt': sig_yield_looseWP = 83.9
+      elif ch == 'emtt': sig_yield_looseWP = 74.7
+      elif ch == 'ettt': sig_yield_looseWP = 78.8
+      elif ch == 'mmtt': sig_yield_looseWP = 44.7
+      elif ch == 'mttt': sig_yield_looseWP = 85.4
+      elif ch == 'eett': sig_yield_looseWP = 36.1
+      if (running_integral+sig_hist.GetBinContent(j)) < sig_yield_looseWP:
+         running_integral += sig_hist.GetBinContent(j)
+      else:
+         cut_ = j
+         break
 
-   for i, item in reversed(list(enumerate(hist1))):
-       if percentage < 0.68:
-          running_total += item
-          percentage = running_total/total
+   sig_error_= ROOT.Double()
+   sig_integral_ = sig_hist.IntegralAndError(cut_,sig_hist.GetNbinsX()+1,sig_error_)
+
+   bkg_error_= ROOT.Double()
+   bkg_integral_ = bkg_hist.IntegralAndError(cut_,bkg_hist.GetNbinsX()+1,bkg_error_)
+   print(sig_integral_,sig_error_)
+   print(bkg_integral_,bkg_error_)
+   val0 = sig_integral_/np.sqrt(bkg_integral_)
+   unc0 = np.sqrt((sig_error_/sig_integral_)**2 + (0.5*bkg_error_/bkg_integral_)**2)*val0
+   print(val0,unc0)
+   AMS = np.sqrt(2*((sig_integral_+bkg_integral_)*np.log(1 + (sig_integral_/bkg_integral_))-sig_integral_))
+   print(AMS)
+   
+   # ----------------------------------------------------------- Test -----------------------------------------------------
+   # test 
+   #bins_array = np.linspace(0,1,100,endpoint=True)
+   #hist1,bins1 = np.histogram(preds1, bins = bins_array, weights = wt1)
+   #hist0,bins0 = np.histogram(preds0, bins = bins_array, weights = wt0)
+   #total = np.sum(hist1)
+   #running_total = 0
+   #percentage = 0
+   #cut1 = 0
+   #plt.figure()
+   #plt.hist(preds1,bins=bins_array,weights=wt1,alpha = 0.5,label='signal',histtype='step')
+   #plt.hist(preds0,bins=bins_array,weights=wt0,alpha = 0.5,label='bkg',histtype='step')
+   #plt.ylim(0,100)
+   #plt.legend(loc='best')
+   #plt.savefig("plots/{}/{}/BDT_Score_Distribution".format(args.scenario,ch))
+
+   #for i, item in reversed(list(enumerate(hist1))):
+   #    if percentage < 0.68:
+   #       running_total += item
+   #       percentage = running_total/total
           #if ch == "mmtt":
             #print(i,item,running_total,total,percentage)
-       else:
-          sig_area = sum(hist1[i:])
-          bkg_area = sum(hist0[i:])
-          AMS = np.sqrt(2*((sig_area+bkg_area)*np.log(1 + (sig_area/bkg_area))-sig_area))
+   #    else:
+   #       sig_area = sum(hist1[i:])
+   #       bkg_area = sum(hist0[i:])
+   #       AMS = np.sqrt(2*((sig_area+bkg_area)*np.log(1 + (sig_area/bkg_area))-sig_area))
           # print("Signal Yield: ",sig_area)
           # print("Background Yield: ",bkg_area)
           # print("S/$\sqrt{B}$: ", sig_area/np.sqrt(bkg_area))
           # print("AMS: ", AMS)
           # print()
           # break
+   # ----------------------------------------------------------- Test -----------------------------------------------------
+
    print("Finished")
    
 
