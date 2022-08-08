@@ -9,6 +9,8 @@ import numpy as np
 import seaborn as sns
 import ROOT
 from array import array
+import pandas as pd
+
 def DrawROCCurve(act,pred,wt,output="roc_curve"):
 
   fpr, tpr, threshold = metrics.roc_curve(act, pred,sample_weight=wt)
@@ -436,13 +438,13 @@ def PlotDistributionComparison(x_label,y_label,dist_0,dist_0_name,dist_1,dist_1_
 
 def ReplaceName(name):
   replace_dict = {
-    "tttt":"#tau_{h}#tau_{h}#tau_{h}#tau_{h}",
-    "mttt":"#mu#tau_{h}#tau_{h}#tau_{h}",
-    "ettt":"e#tau_{h}#tau_{h}#tau_{h}",
-    "emtt":"e#mu#tau_{h}#tau_{h}",
-    "mmtt":" #mu#mu#tau_{h}#tau_{h}",
-    "eett":"ee#tau_{h}#tau_{h}",
-    "2018":"2018 (59.7 fb^{-1})",
+    "tttt":"#tau#tau#tau#tau",
+    "mttt":"#mu#tau#tau#tau",
+    "ettt":"e#tau#tau#tau",
+    "emtt":"e#mu#tau#tau",
+    "mmtt":" #mu#mu#tau#tau",
+    "eett":"ee#tau#tau",
+    "2018":"59.7 fb^{-1} (13 TeV)",
     "mvis_12": "m_{vis}^{12} (GeV)",
     "mvis_13": "m_{vis}^{13} (GeV)",
     "mvis_14": "m_{vis}^{14} (GeV)",
@@ -525,6 +527,43 @@ def RebinHist(hist,binning):
         hout.SetBinError(i,(hout.GetBinError(i)**2+hist.GetBinError(j)**2)**0.5)
   return hout
 
+def DrawReweightPlots(df_x,df_y, x_label, y_label, plot_name="reweight_plot", title_left="", title_right="",ignore_quantile=0.999):
+  ROOT.gROOT.SetBatch(ROOT.kTRUE)
+  c = ROOT.TCanvas('c','c',600,600)
+  g = ROOT.TGraph()
+  x_name = df_x.name
+  y_name = df_y.name
+  df_x.reset_index(drop=True, inplace=True) 
+  df_y.reset_index(drop=True, inplace=True)
+  df = pd.concat([df_x,df_y],axis=1,names=[x_name,y_name])
+  x_quant_up = df_x.quantile(ignore_quantile)
+  y_quant_up = df_y.quantile(ignore_quantile)
+  x_quant_down = df_x.quantile(1-ignore_quantile)
+  y_quant_down = df_y.quantile(1-ignore_quantile)
+  for index, row in df.iterrows():
+    if row[df_x.name] > x_quant_down and row[df_y.name] > y_quant_down and row[df_x.name] < x_quant_up and row[df_y.name] < y_quant_up:
+      g.SetPoint(g.GetN(),row[df_x.name],row[df_y.name])
+  pad = ROOT.TPad("pad","pad",0,0,1,1)
+  pad.Draw()
+  pad.cd()
+  pad.SetBottomMargin(0.12)
+  pad.SetLeftMargin(0.14)
+
+  g.Draw("ap")
+  g.SetMarkerColorAlpha(4,1.0)
+  g.GetXaxis().SetTitle(ReplaceName(x_label))
+  g.GetXaxis().SetTitleSize(0.04)
+  g.GetXaxis().SetTitleOffset(1.3)
+  g.GetYaxis().SetTitle(ReplaceName(y_label))
+  g.GetYaxis().SetTitleSize(0.04)
+
+  DrawTitle(pad, ReplaceName(title_left), 1, scale=0.7)
+  DrawTitle(pad, ReplaceName(title_right), 3, scale=0.7)
+
+  c.Update()
+  name = 'plots/%(plot_name)s.pdf' % vars()
+  c.SaveAs(name)
+  c.Close()
 
 def DrawClosurePlots(df1, df2, df1_name, df2_name, var_name, var_binning, plot_name="closure_plot", title_left="", title_right=""):
   if isinstance(var_binning,tuple):

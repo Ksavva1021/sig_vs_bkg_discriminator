@@ -5,12 +5,13 @@ import argparse
 
 #python scripts/batch_add_to_trees.py --input_location=/vols/cms/gu18/Offline/output/MSSM/vlq_2018_bkg_data/ --output_location=/vols/cms/gu18/Offline/output/MSSM/vlq_2018_bdt
 #python scripts/batch_add_to_trees.py -input_location=/vols/cms/gu18/Offline/output/MSSM/vlq_2018_pre_bdt --output_location=/vols/cms/gu18/Offline/output/MSSM/vlq_2018_bdt_v2 --syst_trees --hadd
+#python scripts/batch_add_to_trees.py --input_location=/vols/cms/gu18/Offline/output/4tau/2018_1907 --output_location=/vols/cms/gu18/Offline/output/4tau/2018_1907_ff
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--input_location',help= 'Name of input location (not including file name)', default='/vols/cms/gu18/Offline/output/MSSM/vlq_2018_matched_v2/')
 parser.add_argument('--output_location',help= 'Name of output location (not including file name)', default='/vols/cms/gu18/Offline/output/MSSM/vlq_2018_bdt/')
 parser.add_argument('--file',help= 'Specify to run for a specific file', default='all')
-parser.add_argument('--channel',help= 'Limit to single channel. If not set will do all', default="tt")
+parser.add_argument('--channel',help= 'Limit to single channel. If not set will do all', default=None)
 parser.add_argument("--syst_trees", action='store_true',help="Also run on systematic variation trees")
 parser.add_argument("--hadd", action='store_true',help="Hadd files after adding branch")
 args = parser.parse_args()
@@ -41,6 +42,19 @@ for file_name in os.listdir(loc):
       channel = "tt"
     elif "_em_" in file_name:
       channel = "em"
+    elif "_tttt_" in file_name:
+      channel = "tttt"
+    elif "_ettt_" in file_name:
+      channel = "ettt"
+    elif "_mttt_" in file_name:
+      channel = "mttt"
+    elif "_emtt_" in file_name:
+      channel = "emtt"
+    elif "_mmtt_" in file_name:
+      channel = "mmtt"
+    elif "_eett_" in file_name:
+      channel = "eett"
+
 
     if "_2016" in file_name:
       year = "2016"
@@ -57,7 +71,7 @@ for file_name in os.listdir(loc):
       splits = ((ent - (ent%splitting))/splitting) + 1
 
       for i in range(0,splits):
-        cmd = "python scripts/add_to_trees.py --input_location=%(loc)s --output_location=%(newloc)s --filename=%(file_name)s --channel=%(channel)s --year=%(year)s --splitting=%(splitting)i --offset=%(i)i" % vars()
+        cmd = "python scripts/add_ff_to_trees.py --input_location=%(loc)s --output_location=%(newloc)s --filename=%(file_name)s --channel=%(channel)s --year=%(year)s --splitting=%(splitting)i --offset=%(i)i" % vars()
         CreateBatchJob('jobs/'+file_name.replace('.root','_'+str(i)+'.sh'),cmssw_base,[cmd])
         SubmitBatchJob('jobs/'+file_name.replace('.root','_'+str(i)+'.sh'),time=180,memory=24,cores=1)
 
@@ -84,6 +98,19 @@ for file_name in os.listdir(loc):
           channel = "tt"
         elif "_em_" in syst_file_name:
           channel = "em"
+        elif "_tttt_" in file_name:
+          channel = "tttt"
+        elif "_ettt_" in file_name:
+          channel = "ettt"
+        elif "_mttt_" in file_name:
+          channel = "mttt"
+        elif "_emtt_" in file_name:
+          channel = "emtt"
+        elif "_mmtt_" in file_name:
+          channel = "mmtt"
+        elif "_eett_" in file_name:
+          channel = "eett"
+
 
         if "_2016" in syst_file_name:
           year = "2016"
@@ -101,7 +128,7 @@ for file_name in os.listdir(loc):
           splits = ((ent - (ent%splitting))/splitting) + 1
     
           for i in range(0,splits):
-            cmd = "python scripts/add_to_trees.py --input_location=%(loc)s/%(file_name)s --output_location=%(newloc)s/%(file_name)s --filename=%(syst_file_name)s --channel=%(channel)s --year=%(year)s --splitting=%(splitting)i --offset=%(i)i" % vars()
+            cmd = "python scripts/add_ff_to_trees.py --input_location=%(loc)s/%(file_name)s --output_location=%(newloc)s/%(file_name)s --filename=%(syst_file_name)s --channel=%(channel)s --year=%(year)s --splitting=%(splitting)i --offset=%(i)i" % vars()
             CreateBatchJob('jobs/'+syst_file_name.replace('.root',"_")+file_name+'_'+str(i)+'.sh',cmssw_base,[cmd])
             SubmitBatchJob('jobs/'+syst_file_name.replace('.root',"_")+file_name+'_'+str(i)+'.sh',time=180,memory=24,cores=1)
     

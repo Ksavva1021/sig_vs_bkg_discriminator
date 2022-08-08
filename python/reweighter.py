@@ -21,8 +21,10 @@ class reweighter(GBReweighter):
     self.gb_args = gb_args
     self.loss_regularization = loss_regularization
     self.normalization = 1.0
+    self.column_names = []
 
   def norm_and_fit(self, original, target, original_weight, target_weight):
+    self.column_names = original.keys()
     self.normalization = target_weight.sum()/original_weight.sum()
     original_weight = self.normalization*original_weight
     self.fit(original, target, original_weight=original_weight, target_weight=target_weight)

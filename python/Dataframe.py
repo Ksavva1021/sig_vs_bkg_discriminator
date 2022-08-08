@@ -5,9 +5,11 @@ import pandas as pd
 import re
 import math
 import json
+import copy
 from prettytable import PrettyTable
 from textwrap import wrap
 from sklearn.model_selection import train_test_split
+
 
 class Dataframe:
 
@@ -236,7 +238,6 @@ class Dataframe:
     get_variables = set(self.columns+self.variables_for_selection+self.variables_for_modified)
     remove_list = list(set(get_variables)-set(self.columns))
     for ind, f in enumerate(self.root_files):
-     
       # Get dataframe from root file
       if self.file_location[-1] == "/":
         tree = uproot.open(self.file_location+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]
@@ -244,9 +245,9 @@ class Dataframe:
       else:
         tree = uproot.open(self.file_location+"/"+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]      
       
-      batches = 500
+      batches = 2
       events_per_batch = tree.numentries / batches
-      remainder = tree.numentries // batches
+      remainder = tree.numentries % batches
       start = 0
       temp_df = pd.DataFrame()
       for i in range(batches):
@@ -294,7 +295,7 @@ class Dataframe:
     total_df = total_df.reindex(sorted(total_df.columns), axis=1)
     self.dataframe = total_df
 
-  def LoadRootFilesFromJson(self,json_file,variables,specific_file=None,specific_extra_name=None,quiet=False,in_extra_name=""):
+  def LoadRootFilesFromJson(self,json_file,variables,specific_file=None,specific_extra_name=None,quiet=False,in_extra_name="",replace={}):
     with open(json_file) as jf:
       data = json.load(jf)
 
@@ -309,8 +310,11 @@ class Dataframe:
     for en, opt in data["add_sel"].items():
       for f in opt["files"]:
         if (specific_file == None and in_extra_name == "") or (specific_file == None and in_extra_name != "" and in_extra_name in en) or (specific_file == f and specific_extra_name == None) or (specific_file == f and specific_extra_name == en):
-          self.AddRootFiles([f],tree_name="ntuple") 
-          self.AddRootSelection([f],opt["sel"],extra_name=en)
+          self.AddRootFiles([f],tree_name="ntuple")
+          sel = copy.deepcopy(opt["sel"]) 
+          for k,v in replace.items():
+            sel = sel.replace(k,v)
+          self.AddRootSelection([f],sel,extra_name=en)
           self.ScaleColumn([f],data["weights"],opt["weight"],extra_name=en)
           if "add_column_names" in data: self.AddColumnsNotFromFile([f],data["add_column_names"],opt["add_column_vals"],extra_name=en)
           if not "data" in data.keys():
@@ -335,6 +339,25 @@ class Dataframe:
       train.loc[:,column] = train_frac*total_scale*train.loc[:,column]/train.loc[:,column].sum()
       test.loc[:,column] = test_frac*total_scale*test.loc[:,column]/test.loc[:,column].sum()
       self.dataframe =  pd.concat([train,test],ignore_index=True, sort=False)
+
+  def NormaliseWeightsInCategory(self, category, category_values, column="weights",total_scale=1000000,train_frac=None,test_frac=None):
+    for ind, cat_val in enumerate(category_values):
+      df = self.dataframe.loc[(self.dataframe.loc[:,category]==cat_val)]
+      if train_frac == None and test_frac == None:
+        df.loc[:,column] = total_scale*df.loc[:,column]/df.loc[:,column].sum()
+      else:
+        train = df.loc[(df.loc[:,'train']==1)].copy(deep=True)
+        test = df.loc[(df.loc[:,'train']==0)].copy(deep=True)
+        train.loc[:,column] = train_frac*total_scale*train.loc[:,column]/train.loc[:,column].sum()
+        test.loc[:,column] = test_frac*total_scale*test.loc[:,column]/test.loc[:,column].sum()
+        self.dataframe =  pd.concat([train,test],ignore_index=True, sort=False)
+
+      if ind == 0:
+        total_df = df.copy(deep=True)
+      else:
+        total_df = pd.concat([total_df,df], ignore_index=True, sort=False)
+
+    self.dataframe = copy.deepcopy(total_df)
 
   def TrainTestSplit(self,column="train",testsize=0.5,seed=42):
     train, test = train_test_split(self.dataframe,test_size=testsize, random_state=seed)
@@ -427,6 +450,21 @@ class Dataframe:
     
     return train_df, wt_train_df, test_df, wt_test_df
     
+  def SplitTrainTestXyWts(self,y="y"):
+    train_df = self.dataframe.loc[(self.dataframe.loc[:,"train"] == 1)]
+    test_df = self.dataframe.loc[(self.dataframe.loc[:,"train"] == 0)]
+
+    wt_train_df = train_df.loc[:,"weights"]
+    wt_test_df = test_df.loc[:,"weights"]
+ 
+    y_train_df = train_df.loc[:,y]   
+    y_test_df = test_df.loc[:,y]
+
+    X_train_df = train_df.drop(["weights","train",y],axis=1)
+    X_test_df = test_df.drop(["weights","train",y],axis=1)
+
+    return X_train_df, y_train_df, wt_train_df, X_test_df, y_test_df, wt_test_df
+
  
 
 
