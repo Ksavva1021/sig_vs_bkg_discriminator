@@ -286,15 +286,22 @@ def DrawConfusionMatrix(y_test,preds,wt_test,label,output="confusion_matrix"):
     new_cm.append([])
     for j in i: new_cm[ind].append(j/norm)
 
-  data_array = np.array(new_cm)
-  fig, ax1 = plt.subplots()
-  im, cbar = heatmap(data_array, label, label, ax=ax1, cmap="Blues")
-  texts = annotate_heatmap(im, valfmt="{x:.3f}")
-
-  plt.ylabel('True Label')
-  plt.xlabel('Predicted Label')
-  fig.tight_layout()
+  import seaborn as sns
+  
+  ax = sns.heatmap(new_cm, annot=True, cmap='Blues')
+  
+  ax.set_title('');
+  ax.set_xlabel('Predicted Label')
+  ax.set_ylabel('True Label');
+  
+  ## Ticket labels - List must be in alphabetical order
+  ax.xaxis.set_ticklabels(label)
+  ax.yaxis.set_ticklabels(label)
+  
   plt.savefig("plots/"+output+".pdf")
+  print "plots/"+output+".pdf created"
+  plt.close()
+
 
 def DrawTitle(pad, text, align, scale=1):
     pad_backup = ROOT.gPad
@@ -527,7 +534,7 @@ def RebinHist(hist,binning):
         hout.SetBinError(i,(hout.GetBinError(i)**2+hist.GetBinError(j)**2)**0.5)
   return hout
 
-def DrawReweightPlots(df_x,df_y, x_label, y_label, plot_name="reweight_plot", title_left="", title_right="",ignore_quantile=0.999):
+def DrawReweightPlots(df_x,df_y, x_label, y_label, plot_name="reweight_plot", title_left="", title_right="",ignore_quantile=0.99):
   ROOT.gROOT.SetBatch(ROOT.kTRUE)
   c = ROOT.TCanvas('c','c',600,600)
   g = ROOT.TGraph()
@@ -582,9 +589,9 @@ def DrawClosurePlots(df1, df2, df1_name, df2_name, var_name, var_binning, plot_n
 
   # rebin to find good binning
   if hist1.GetEntries() < hist2.GetEntries():
-    binning = FindRebinning(hist1,BinThreshold=100,BinUncertFraction=0.2)
+    binning = FindRebinning(hist1,BinThreshold=100,BinUncertFraction=0.5)
   else:
-    binning = FindRebinning(hists,BinThreshold=100,BinUncertFraction=0.2)
+    binning = FindRebinning(hists,BinThreshold=100,BinUncertFraction=0.5)
 
   hist1 = RebinHist(hist1,binning)
   hist2 = RebinHist(hist2,binning)
@@ -593,3 +600,4 @@ def DrawClosurePlots(df1, df2, df1_name, df2_name, var_name, var_binning, plot_n
   hist2.Scale(1.0,"width")
 
   PlotDistributionComparison(ReplaceName(var_name), ReplaceName("dN/d{}".format(var_name)),hist1, df1_name, hist2, df2_name, "plots", plot_name, title_left=ReplaceName(title_left), title_right=ReplaceName(title_right))
+

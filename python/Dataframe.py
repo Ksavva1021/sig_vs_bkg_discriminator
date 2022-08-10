@@ -27,7 +27,11 @@ class Dataframe:
     self.file_location = ''
     self.file_ext = ''
     self.dataframe = None
-    self.func_dict = {"fabs":"abs(x)","cos":"math.cos(x)","sin":"math.sin(x)", "cosh":"math.cosh(x)", "sinh":"math.sinh(x)", "ln":"math.log(x)"}
+    self.func_dict = {"fabs":"abs(x)","cos":"math.cos(x)","sin":"math.sin(x)", "cosh":"math.cosh(x)", "sinh":"math.sinh(x)", "ln":"math.log(x)", "boolean":"x==0"}
+    self.weight_name = "wt"
+    self.max_events = 100000
+    self.file_sample = 100000
+
 
   def __AllSplitStringsSteps__(self,selection):
     #print "-----------------------------------------------------------------------------------------------"
@@ -245,27 +249,35 @@ class Dataframe:
       else:
         tree = uproot.open(self.file_location+"/"+f.split(" (")[0]+self.file_ext)[self.tree_names[ind]]      
       
-      batches = 2
+      batches = int(tree.numentries/self.max_events) + 1
       events_per_batch = tree.numentries / batches
       remainder = tree.numentries % batches
       start = 0
       temp_df = pd.DataFrame()
-      for i in range(batches):
-        end = (i+1) * events_per_batch 
-        df = 1*tree.pandas.df(get_variables,entrystart=start,entrystop=end)
+      for i in range(batches+1):
+
+        if i != batches:
+          end = (i+1) * events_per_batch 
+        elif (i == batches and remainder != 0):
+          end = tree.numentries
+        else:
+          break
+
+        df = 1.0*tree.pandas.df(get_variables,entrystart=start,entrystop=end)
+
         # Cut dataframe
         if not self.root_selection[f] == "(1)":
            df = eval(self.python_selection[f])
-        temp_df = pd.concat([temp_df,df], ignore_index=True, sort=False)      
+        temp_df = pd.concat([temp_df,df], ignore_index=True, sort=False)
+
+        if len(temp_df) > self.file_sample: 
+          temp_df.loc[:,self.weight_name] *= (float(tree.numentries)/float(end))
+          break
+
         start = end
-      if (remainder != 0):
-        df = 1*tree.pandas.df(get_variables,entrystart=(tree.numentries-remainder),entrystop=tree.numentries)
-        if not self.root_selection[f] == "(1)":
-           df = eval(self.python_selection[f])
-        temp_df = pd.concat([temp_df,df], ignore_index=True, sort=False) 
-      
+
       df = temp_df.copy(deep=True)
-        
+
       # Calculate modified variables
       for mod_var in self.modified_columns:
         df.loc[:,mod_var] = eval(''.join(self.__AllSplitStringsSteps__(mod_var)))
@@ -293,6 +305,12 @@ class Dataframe:
         total_df = pd.concat([total_df,df], ignore_index=True, sort=False)
 
     total_df = total_df.reindex(sorted(total_df.columns), axis=1)
+
+    # convert object to int
+    for key in total_df:
+      if total_df.loc[:,key].dtypes == object:
+        total_df.loc[:,key] = pd.to_numeric(total_df.loc[:,key], errors='coerce').astype('Int32')
+
     self.dataframe = total_df
 
   def LoadRootFilesFromJson(self,json_file,variables,specific_file=None,specific_extra_name=None,quiet=False,in_extra_name="",replace={}):
@@ -304,6 +322,7 @@ class Dataframe:
 
     self.file_location = data["file_location"]
     self.file_ext = data["file_ext"]
+    self.weight_name = data["weights"]
 
     self.AddColumns([data["weights"]]+variables)
 
@@ -350,7 +369,7 @@ class Dataframe:
         test = df.loc[(df.loc[:,'train']==0)].copy(deep=True)
         train.loc[:,column] = train_frac*total_scale*train.loc[:,column]/train.loc[:,column].sum()
         test.loc[:,column] = test_frac*total_scale*test.loc[:,column]/test.loc[:,column].sum()
-        self.dataframe =  pd.concat([train,test],ignore_index=True, sort=False)
+        df =  pd.concat([train,test],ignore_index=True, sort=False)
 
       if ind == 0:
         total_df = df.copy(deep=True)
