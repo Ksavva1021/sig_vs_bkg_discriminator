@@ -9,8 +9,8 @@ for i in $(ls jobs/*output.log); do
     new_err=${i//_output.log/"_error.log"}
     new_out=${i//_output.log/"_output.log"}
     #echo $job 
-    if [[ $2 != "" ]]; then
-      qsub -e $new_err -o $new_out -V -q hep.q -pe hep.pe 2 -l h_rt=3:0:0 -l h_vmem=48G -cwd $job
+    if [[ $1 != "" ]]; then
+      qsub -e $new_err -o $new_out -V -q hep.q -l h_rt=3:0:0 -l h_vmem=24G -cwd $job
     fi
     (( COUNT++ ))
   fi

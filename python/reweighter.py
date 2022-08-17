@@ -1,8 +1,11 @@
 from hep_ml.reweight import GBReweighter
-from hep_ml.metrics_utils import ks_2samp_weighted
+from hep_ml.metrics_utils import ks_2samp_weighted, compute_cdf
 import copy
 import itertools
 import numpy as np
+import os
+import pickle as pkl
+import json
 
 class reweighter(GBReweighter):
   
@@ -22,6 +25,7 @@ class reweighter(GBReweighter):
     self.loss_regularization = loss_regularization
     self.normalization = 1.0
     self.column_names = []
+    self.KS_value = None
 
   def norm_and_fit(self, original, target, original_weight, target_weight):
     self.column_names = original.keys()
@@ -30,6 +34,7 @@ class reweighter(GBReweighter):
     self.fit(original, target, original_weight=original_weight, target_weight=target_weight)
     total_original_weights = np.multiply(self.predict_reweights(original,add_norm=False),original_weight)
     self.normalization = self.normalization*target_weight.sum()/total_original_weights.sum() 
+    
 
   def predict_reweights(self, original, add_norm=True):
     wts = self.predict_weights(original) 
@@ -39,7 +44,10 @@ class reweighter(GBReweighter):
       return wts
 
   def dump_hyperparameters(self):
-    hp = copy.deepcopy(self.gb_args)
+    if self.gb_args != None:
+      hp = copy.deepcopy(self.gb_args) 
+    else:
+      hp = {}
     hp["learning_rate"] = self.learning_rate
     hp["n_estimators"] = self.n_estimators
     hp["max_depth"] = self.max_depth
@@ -58,13 +66,23 @@ class reweighter(GBReweighter):
       plt.legend()
     plt.show()
   
+  def ks_2samp_weighted_unnormalised(self, data1, data2, weights1, weights2):
+    x = np.unique(np.concatenate([data1, data2]))
+    inds1 = np.searchsorted(x, data1)
+    inds2 = np.searchsorted(x, data2)
+    w1 = np.bincount(inds1, weights=weights1, minlength=len(x))
+    w2 = np.bincount(inds2, weights=weights2, minlength=len(x))
+    F1 = compute_cdf(w1)
+    F2 = compute_cdf(w2)
+    return np.max(np.abs(F1 - F2))
+
   def KS(self, original, target, original_weights, target_weights, columns=['pt_1']):
     ks_dict = {}
     ks_total = 0
     for id, column in enumerate(columns, 1):
-      ks_dict[column] = round(ks_2samp_weighted(original[column], target[column], weights1=original_weights, weights2=target_weights),6)
+      ks_dict[column] = round(self.ks_2samp_weighted_unnormalised(original[column], target[column], weights1=original_weights, weights2=target_weights),6)
       ks_total += ks_dict[column]
-    return round(ks_total,6), ks_dict
+    return round(float(ks_total)/len(columns),6), ks_dict
 
   def set_params(self,val):
     if "learning_rate" in val.keys():
@@ -103,7 +121,77 @@ class reweighter(GBReweighter):
         best_hp = copy.deepcopy(unchanged_val)
     print "Best hyperparameters:", best_hp
     print "Lowest KS score:", lowest_KS
+    self.KS_value = lowest_KS
     self = best_model 
     
+  def grid_search_batch(self, name, original_train, target_train, original_train_weight, target_train_weight, original_test, target_test, original_test_weight, target_test_weight, param_grid={}, scoring_variables=["pt_1"]):
+    from UserCode.sig_vs_bkg_discriminator.batch import CreateJob,CreateBatchJob,SubmitBatchJob
+    if not os.path.isdir("scan_batch"): os.system("mkdir scan_batch")
+    if not os.path.isdir("scan_batch/dataframes"): os.system("mkdir scan_batch/dataframes")
+    if not os.path.isdir("scan_batch/models"): os.system("mkdir scan_batch/models")
+    if not os.path.isdir("scan_batch/jobs"): os.system("mkdir scan_batch/jobs")
+    if not os.path.isdir("scan_batch/outputs"): os.system("mkdir scan_batch/outputs")
+    if not os.path.isdir("scan_batch/hyperparameters"): os.system("mkdir scan_batch/hyperparameters")
+    if not os.path.isdir("scan_batch/scores"): os.system("mkdir scan_batch/scores")
 
+    # dump the dataframes to dataframes file
+    original_train.to_pickle("scan_batch/dataframes/{}_original_train_dataframe.pkl".format(name))
+    target_train.to_pickle("scan_batch/dataframes/{}_target_train_dataframe.pkl".format(name))
+    original_train_weight.to_pickle("scan_batch/dataframes/{}_original_train_weight_dataframe.pkl".format(name))
+    target_train_weight.to_pickle("scan_batch/dataframes/{}_target_train_weight_dataframe.pkl".format(name))
+    original_test.to_pickle("scan_batch/dataframes/{}_original_test_dataframe.pkl".format(name))
+    target_test.to_pickle("scan_batch/dataframes/{}_target_test_dataframe.pkl".format(name))
+    original_test_weight.to_pickle("scan_batch/dataframes/{}_original_test_weight_dataframe.pkl".format(name))
+    target_test_weight.to_pickle("scan_batch/dataframes/{}_target_test_weight_dataframe.pkl".format(name))
 
+    # loop through hyperparameters
+    keys, values = zip(*param_grid.items())
+    permutations_dicts = [dict(zip(keys, v)) for v in itertools.product(*values)]
+    for ind, val in enumerate(permutations_dicts):
+      for k,v in val.items(): val[k] = [v]
+      
+      p_cmds = [
+                "import pickle as pkl",
+                "import pandas as pd",
+                "import os",
+                "import json",
+                "from UserCode.sig_vs_bkg_discriminator import reweighter",
+                "original_train = pd.read_pickle('scan_batch/dataframes/{}_original_train_dataframe.pkl')".format(name),
+                "target_train = pd.read_pickle('scan_batch/dataframes/{}_target_train_dataframe.pkl')".format(name),
+                "original_train_weight = pd.read_pickle('scan_batch/dataframes/{}_original_train_weight_dataframe.pkl')".format(name),
+                "target_train_weight = pd.read_pickle('scan_batch/dataframes/{}_target_train_weight_dataframe.pkl')".format(name),
+                "original_test = pd.read_pickle('scan_batch/dataframes/{}_original_test_dataframe.pkl')".format(name),
+                "target_test = pd.read_pickle('scan_batch/dataframes/{}_target_test_dataframe.pkl')".format(name),
+                "original_test_weight = pd.read_pickle('scan_batch/dataframes/{}_original_test_weight_dataframe.pkl')".format(name),
+                "target_test_weight = pd.read_pickle('scan_batch/dataframes/{}_target_test_weight_dataframe.pkl')".format(name),
+                "rwter = reweighter.reweighter()",
+                "rwter.grid_search(original_train, target_train, original_train_weight, target_train_weight, original_test, target_test, original_test_weight, target_test_weight, param_grid={}, scoring_variables={})".format(str(val),str(scoring_variables)),
+                "pkl.dump(rwter,open('scan_batch/models/{}_{}.pkl', 'wb'))".format(name,ind),
+                "with open('scan_batch/hyperparameters/{}_{}.json', 'w') as outfile: json.dump(rwter.dump_hyperparameters(), outfile)".format(name,ind),
+                "score = str(rwter.KS_value)",
+                "os.system('echo %(score)s &> scan_batch/scores/{}_{}.txt' % vars())".format(name,ind),
+                ]
+      CreateJob("scan_batch/jobs/"+name+"_"+str(ind)+".py",p_cmds)
+      cmssw_base = os.getcwd().replace('src/UserCode/sig_vs_bkg_discriminator','')
+      CreateBatchJob("scan_batch/jobs/"+name+"_"+str(ind)+".sh",cmssw_base,["python scan_batch/jobs/{}".format(name+"_"+str(ind)+".py")])
+      SubmitBatchJob("scan_batch/jobs/"+name+"_"+str(ind)+".sh")
+
+  def collect_grid_search_batch(self, name):
+    ind = 0
+    for file in os.listdir("scan_batch/scores/"):
+      if name+"_" in file:
+        f = open("scan_batch/scores/"+file, "r")
+        l = float(f.readline().rstrip())
+        if ind == 0:
+          lowest_score_ind = file.split("_")[-1].split(".txt")[0]
+          lowest_score = 1.0*l
+        elif l < lowest_score:
+          lowest_score_ind = file.split("_")[-1].split(".txt")[0]
+          lowest_score = 1.0*l
+        ind+=1 
+
+    #self = pkl.load(open('scan_batch/models/{}_{}.pkl'.format(name,lowest_score_ind), "rb"))
+    #print self
+
+    with open('scan_batch/hyperparameters/{}_{}.json'.format(name,lowest_score_ind)) as json_file: params = json.load(json_file)
+    self.set_params(copy.deepcopy(params))

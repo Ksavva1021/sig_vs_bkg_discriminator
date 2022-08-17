@@ -572,6 +572,50 @@ def DrawReweightPlots(df_x,df_y, x_label, y_label, plot_name="reweight_plot", ti
   c.SaveAs(name)
   c.Close()
 
+def DrawColzReweightPlots(df_x, df_y, wt, x_label, y_label, plot_name="reweight_colz_plot", title_left="", title_right="",ignore_quantile=0.99, num_of_bins=20):
+  ROOT.gROOT.SetBatch(ROOT.kTRUE)
+  c = ROOT.TCanvas('c','c',600,600)
+  df_x.reset_index(drop=True, inplace=True)
+  df_y.reset_index(drop=True, inplace=True)
+  wt.reset_index(drop=True, inplace=True)
+  df = pd.concat([wt,df_x,df_y],axis=1,names=[wt.name,df_x.name,df_y.name])
+  x_quant_up = df_x.quantile(ignore_quantile)
+  y_quant_up = df_y.quantile(ignore_quantile)
+  x_quant_down = df_x.quantile(1-ignore_quantile)
+  y_quant_down = df_y.quantile(1-ignore_quantile)
+  x_bins = array('f', map(float,np.linspace(x_quant_down,x_quant_up,num=num_of_bins).tolist()))
+  y_bins = array('f', map(float,np.linspace(y_quant_down,y_quant_up,num=num_of_bins).tolist()))
+  hout = ROOT.TH2D('hout','',len(x_bins)-1, x_bins,len(y_bins)-1, y_bins)
+  for index, row in df.iterrows():
+    if row[df_x.name] > x_quant_down and row[df_y.name] > y_quant_down and row[df_x.name] < x_quant_up and row[df_y.name] < y_quant_up:
+      hout.Fill(row[df_x.name],row[df_y.name],row[wt.name])
+  pad = ROOT.TPad("pad","pad",0,0,1,1)
+  pad.Draw()
+  pad.cd()
+  pad.SetBottomMargin(0.12)
+  pad.SetLeftMargin(0.14)
+  pad.SetRightMargin(0.2)
+
+  hout.SetStats(0)
+  hout.Draw("colz")
+  hout.GetXaxis().SetTitle(ReplaceName(x_label))
+  hout.GetXaxis().SetTitleSize(0.04)
+  hout.GetXaxis().SetTitleOffset(1.3)
+  hout.GetYaxis().SetTitle(ReplaceName(y_label))
+  hout.GetYaxis().SetTitleSize(0.04)
+  hout.GetZaxis().SetTitle("Events")
+  hout.GetZaxis().SetTitleOffset(1.3)
+  hout.GetZaxis().SetTitleSize(0.04)
+
+  DrawTitle(pad, ReplaceName(title_left), 1, scale=0.7)
+  DrawTitle(pad, ReplaceName(title_right), 3, scale=0.7)
+
+  c.Update()
+  name = 'plots/%(plot_name)s.pdf' % vars()
+  c.SaveAs(name)
+  c.Close()
+
+
 def DrawClosurePlots(df1, df2, df1_name, df2_name, var_name, var_binning, plot_name="closure_plot", title_left="", title_right=""):
   if isinstance(var_binning,tuple):
     bins = array('f', map(float,[(float(var_binning[2]-var_binning[1])/var_binning[0])*i for i in range(0,var_binning[0])]))
@@ -591,7 +635,7 @@ def DrawClosurePlots(df1, df2, df1_name, df2_name, var_name, var_binning, plot_n
   if hist1.GetEntries() < hist2.GetEntries():
     binning = FindRebinning(hist1,BinThreshold=100,BinUncertFraction=0.5)
   else:
-    binning = FindRebinning(hists,BinThreshold=100,BinUncertFraction=0.5)
+    binning = FindRebinning(hist2,BinThreshold=100,BinUncertFraction=0.5)
 
   hist1 = RebinHist(hist1,binning)
   hist2 = RebinHist(hist2,binning)

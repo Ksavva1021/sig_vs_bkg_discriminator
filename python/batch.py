@@ -1,5 +1,13 @@
 import os
 
+def CreateJob(name,cmd_list):
+  if os.path.exists(name): os.system('rm %(name)s' % vars())
+  for cmd in cmd_list:
+    os.system('echo "%(cmd)s" >> %(name)s' % vars())
+  os.system('chmod +x %(name)s' % vars())
+  print "Created job:",name
+
+
 def CreateBatchJob(name,cmssw_base,cmd_list):
   if os.path.exists(name): os.system('rm %(name)s' % vars())
   os.system('echo "#!/bin/bash" >> %(name)s' % vars())
